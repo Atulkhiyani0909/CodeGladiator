@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// 1. USER MODEL
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String?
+
+  thirdPartyAuthenticated Boolean @default(false)
+
+  
+  battlesWon  Int      @default(0)
+  battlesLost Int      @default(0)
+
+  // RELATIONSHIPS (The "Three Roles")
+  // 1. Battles where they were Player A
+  battlesAsA  Battle[] @relation("PlayerA") 
+  
+  // 2. Battles where they were Player B
+  battlesAsB  Battle[] @relation("PlayerB") 
+  
+  // 3. Battles where they WON
+  winningBattles Battle[] @relation("BattleWinner") 
+  
+  submissions Submission[]
+}
+
+// 2. BATTLE MODEL
+model Battle {
+  id        String    @id @default(uuid())
+  status    Status    @default(WAITING)
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+
+  // ROLE 1: PLAYER A
+  playerAId String
+  playerA   User      @relation("PlayerA", fields: [playerAId], references: [id])
+
+  // ROLE 2: PLAYER B 
+  playerBId String?
+  playerB   User?     @relation("PlayerB", fields: [playerBId], references: [id])
+
+  // ROLE 3: THE WINNER
+  // DIRECT LINK to User. 
+  winnerId  String?   
+  winner    User?     @relation("BattleWinner", fields: [winnerId], references: [id])
+
+  submissions Submission[]
+}
+
+model Problem {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  slug        String[]
+  difficulty  String
+  testCases   Json
+
+  submissions Submission[]
+}
+
+enum Status {
+  WAITING
+  ACTIVE
+  FINISHED
+}
+
+
+
+model Languages {
+  id   String @id @default(uuid())
+  name String @unique
+
+  submissionID Submission[]
+}
+
+enum CodeStatus {
+  TIME_LIMIT_EXCEDED
+  ACCEPTED
+  WRONG
+  PENDING
+}
+
+model Submission {
+  id        String     @id @default(uuid())
+  code      String     @db.Text
+  status    CodeStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+  output    String?
+
+  BattleId String?
+  battle   Battle? @relation(fields: [BattleId], references: [id])
+
+  languageId String
+  language   Languages @relation(fields: [languageId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  problemId String
+  problem   Problem @relation(fields: [problemId], references: [id])
+}
+
