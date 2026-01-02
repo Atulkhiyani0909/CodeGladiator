@@ -1,14 +1,19 @@
-import type { Request, Response } from "express";
+import type { Request, Response, CookieOptions } from "express";
 import prisma from "../DB/db.js";
 import bcrypt from "bcryptjs";
 import accessAndRefreshToken from "../utils/token.js";
-import { z } from 'zod'
+import { z } from 'zod';
+import jwt from 'jsonwebtoken';
+import type { JwtPayload } from "jsonwebtoken";
 
-const options = {
+const isProduction = process.env.NODE_ENV === 'production';
+
+const cookieOptions: CookieOptions = {
     httpOnly: true,
-    secure: true
-}
-
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+};
 
 const signupSchema = z.object({
     username: z.string().min(3, "Username must be at least 3 characters"),
@@ -16,19 +21,14 @@ const signupSchema = z.object({
     password: z.string().min(6, "Password must be at least 6 characters")
 });
 
-
 const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
     password: z.string()
 });
 
-
 class Auth {
     signUp = async (req: Request, res: Response) => {
-
-
         const validation = signupSchema.safeParse(req.body);
-
 
         if (!validation.success) {
             return res.status(400).json({
@@ -40,7 +40,6 @@ class Auth {
         const { email, password, username } = validation.data;
 
         try {
-
             const existingUser = await prisma.user.findUnique({ where: { email } });
 
             if (existingUser) {
@@ -55,9 +54,9 @@ class Auth {
                     username: username,
                     password: hashed_password
                 }
-            })
+            });
 
-            const { accessToken, refreshToken } = await accessAndRefreshToken(new_user);
+            const { accessToken, refreshToken } = accessAndRefreshToken(new_user);
 
             await prisma.user.update({
                 where: {
@@ -66,26 +65,22 @@ class Auth {
                 data: {
                     refreshToken: refreshToken
                 }
-            })
+            });
 
             return res.status(200)
-                .cookie("refreshToken", refreshToken, options)
-                .cookie("accessToken", accessToken, options)
-                .json(
-                    {
-                        msg: "User SignUP Successfully"
-                    }
-                );
+                .cookie("refreshToken", refreshToken, cookieOptions)
+                .cookie("accessToken", accessToken, cookieOptions)
+                .json({
+                    msg: "User SignUP Successfully"
+                });
 
         } catch (error) {
             console.log(error);
             return res.status(500).json({ msg: "User SignUp Failed" });
         }
-
     }
 
     login = async (req: Request, res: Response) => {
-
         const validation = loginSchema.safeParse(req.body);
 
         if (!validation.success) {
@@ -95,31 +90,27 @@ class Auth {
         const { email, password } = validation.data;
 
         try {
-
             const user = await prisma.user.findUnique({
                 where: {
                     email: email
                 }
-            })
+            });
 
             if (!user) {
-                return res.status(401).json(
-                    {
-                        msg: "Invalid Credentials"
-                    }
-                )
+                return res.status(401).json({
+                    msg: "Invalid Credentials"
+                });
             }
 
-            //@ts-ignore
-            const password_check = await bcrypt.compare(password, user.password);
+            const password_check = await bcrypt.compare(password, user.password || "");
 
             if (!password_check) {
-                return res.status(200).json({
-                    msg: "Invalid Credentials Try Again"
-                })
+                return res.status(401).json({
+                    msg: "Invalid Credentials"
+                });
             }
 
-            const { accessToken, refreshToken } = await accessAndRefreshToken(user);
+            const { accessToken, refreshToken } = accessAndRefreshToken(user);
 
             await prisma.user.update({
                 where: {
@@ -128,23 +119,51 @@ class Auth {
                 data: {
                     refreshToken: refreshToken
                 }
-            })
+            });
 
             return res.status(200)
-                .cookie("refreshToken", refreshToken, options)
-                .cookie("accessToken", accessToken, options)
+                .cookie("refreshToken", refreshToken, cookieOptions)
+                .cookie("accessToken", accessToken, cookieOptions)
                 .json({
-                    msg: "User created SuccessFully"
-                })
-
+                    msg: "User Logged In Successfully"
+                });
 
         } catch (error) {
             console.log(error);
             return res.status(500).json({ msg: "User Login Failed" });
         }
+    }
 
+    currentUser = async (req: Request, res: Response) => {
+        const { accessToken } = req.cookies;
+
+        if (!accessToken) {
+            return res.status(401).json({ msg: "Not Authenticated" });
+        }
+
+        try {
+            const payload = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET || "") as JwtPayload;
+
+            if (!payload || !payload.id) {
+                return res.status(403).json({ msg: "Invalid Token" });
+            }
+
+            const user = await prisma.user.findUnique({
+                where: { id: payload.id },
+                select: { id: true, email: true, username: true }
+            });
+
+            if (!user) {
+                return res.status(404).json({ msg: "User not found" });
+            }
+
+            return res.status(200).json(user);
+
+        } catch (error) {
+            console.log(error);
+            return res.status(403).json({ msg: "Invalid or Expired Token" });
+        }
     }
 }
-
 
 export default Auth;

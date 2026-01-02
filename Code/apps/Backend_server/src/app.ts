@@ -10,7 +10,7 @@ import authRoutes from './routes/auth.js';
 
 const app = express();
 
-app.use(cors({ origin: "*" }));
+app.use(cors({ origin: "http://localhost:3001",credentials:true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

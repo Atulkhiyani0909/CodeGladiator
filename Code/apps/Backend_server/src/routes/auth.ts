@@ -7,5 +7,5 @@ const auth = new Auth();
 
 router.post('/signup', auth.signUp);
 router.post('/login', auth.login);
-
+router.get('/current-user',auth.currentUser);
 export default router;
