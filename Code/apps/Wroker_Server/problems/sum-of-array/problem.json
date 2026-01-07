@@ -1,0 +1,16 @@
+{
+  "slug": "sum-of-array",
+  "name": "Sum of Array Elements",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "arr",
+      "type": "List<int>"
+    }
+  ],
+  "returnType": "int",
+  "totalTestCases": 4
+}

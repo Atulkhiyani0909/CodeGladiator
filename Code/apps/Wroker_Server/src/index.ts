@@ -1,87 +1,106 @@
-import express from 'express'
+import express from 'express';
 import { createClient } from 'redis';
 import { loadProblemData } from './utils/problemLoader.js';
 import { executeDocker } from './utils/dockerRunner.js';
+import axios from 'axios';
 
 const client = createClient();
-
-console.log(client);
-
-
 const app = express();
 
-
+const MAIN_SERVER_URL = 'http://localhost:8080';
 
 async function main() {
-    await client.connect();
+    try {
+        await client.connect();
+        console.log("✅ Connected to Redis");
 
-    while (1) {
-        const submission = await client.brPop('Execution', 0);
+        while (true) {
+            try {
+                
+                const submission = await client.brPop('Execution', 0);
+                
+                // @ts-ignore
+                const job = JSON.parse(submission.element);
+                console.log("📨 Processing Job:", job.id);
 
-        //@ts-ignore
-        const resposne = JSON.parse(submission?.element);
-        console.log(resposne);
+                
+                const problemFiles = await loadProblemData(job.problem.slug); 
+                const { fullInputs, fullOutputs } = problemFiles;
 
-        const result = await loadProblemData(resposne.problem.slug);
+              
+                const executionResult = await executeDocker(
+                    job.id, 
+                    job.code, 
+                    fullInputs, 
+                    job.language.name, 
+                    job.problem.slug
+                );
 
-        console.log(result);
-
-        try {
-            // 1. LOAD TEST CASES (Using the Slug)
-            // This goes to /problems/simple-sum/full_inputs.txt
-            const { fullInputs, fullOutputs } = loadProblemData(resposne.problem.slug);
-
-            // 2. EXECUTE DOCKER
-            // We pass the LOADED inputs to Docker
-            const result = await executeDocker(resposne.id, resposne.code, fullInputs, resposne.language.name);
-
-            console.log("---------------------------------");
-            console.log("🤖 Docker Exit Success:", result.success);
-            console.log("📤 User Output (Raw):", JSON.stringify(result.output));
-            console.log("📄 Expected Output:  ", JSON.stringify(fullOutputs.trim()));
-            console.log("---------------------------------");
-
-            if (result.success) {
-                const DELIMITER = "$$$DELIMITER$$$";
-
-                // 1. Get raw strings
-                let userOutput = (result.output || "").trim();
-                const expectedOutput = fullOutputs.trim();
-
-                // 2. FIX: Remove the trailing delimiter from the User Output if it exists
-                // The driver adds it after the last test case, but we don't need it.
-                if (userOutput.endsWith(DELIMITER)) {
-                    userOutput = userOutput.slice(0, -DELIMITER.length).trim();
-                }
-
-                // 3. Log Debugging (Optional)
                 console.log("---------------------------------");
-                console.log("User (Final):", JSON.stringify(userOutput));
-                console.log("Exp. (Final):", JSON.stringify(expectedOutput));
-                console.log("Match?", userOutput === expectedOutput);
-                console.log("---------------------------------");
+                console.log("🤖 Docker Execution Success:", executionResult.success);
 
-                if (userOutput === expectedOutput) {
-                    console.log(`✅ Job Passed!`);
-                    // TODO: Update Redis/DB status to "Success"
+                let isCorrect = false;
+
+                if (executionResult.success) {
+                    const DELIMITER = "$$$DELIMITER$$$";
+                    
+                
+                    let userOutput = (executionResult.output || "").trim();
+                    const expectedOutput = fullOutputs.trim();
+
+                    if (userOutput.endsWith(DELIMITER)) {
+                        userOutput = userOutput.slice(0, -DELIMITER.length).trim();
+                    }
+
+                    console.log("---------------------------------");
+             
+                    
+                    isCorrect = (userOutput === expectedOutput);
+                    
+                    console.log("Match Status:", isCorrect);
+                    console.log("---------------------------------");
+
+                    if (isCorrect) {
+                        console.log(`✅ Job ${job.id} Passed!`);
+                    } else {
+                        console.log(`❌ Job ${job.id} Failed (Wrong Answer)`);
+                    }
                 } else {
-                    console.log(`❌ Job Failed (Wrong Answer)`);
-                    // TODO: Update Redis/DB status to "Failed"
+                    console.log(`❌ Job ${job.id} Failed (Runtime/Compilation Error)`);
+                    console.log("Error Log:", executionResult.error);
                 }
+
+              
+                await saveStatus(job.id, isCorrect, executionResult);
+
+            } catch (jobError: any) {
+                console.error(`⚠️ Error processing specific job:`, jobError.message);
+             
             }
-
-
-
-        } catch (err: any) {
-            console.error(`System Error for Job ${resposne.id}:`, err.message);
         }
-
+    } catch (connectionError: any) {
+        console.error("❌ Fatal Redis/Worker Error:", connectionError.message);
     }
 }
+
+
+const saveStatus = async (jobId: string, isSuccess: boolean, executionResult: any) => {
+    try {
+        await axios.post(`${MAIN_SERVER_URL}/api/v1/webhook/save/status/${jobId}`, {
+            success: isSuccess,
+           
+            output: isSuccess ? executionResult.output : executionResult.error
+        });
+        console.log(`📡 Status sent to Main Server for ${jobId}`);
+    } catch (err: any) {
+        console.error(`❌ Failed to update Main Server: ${err.message}`);
+    }
+}
+
 
 main();
 
 
 app.listen(3000, () => {
-    console.log('Worker running on the port 4000');
-})
+    console.log('🚀 Worker listening on port 3000');
+});

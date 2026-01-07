@@ -1,26 +1,42 @@
-import express from 'express';
+import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import dotenv from 'dotenv'
 import cookieParser from 'cookie-parser'
+import { rateLimit } from 'express-rate-limit'
+
+
+
 
 dotenv.config();
 
-import authRoutes from './routes/auth.js'; 
+import authRoutes from './routes/auth.js';
 import codeExecutionRoutes from './routes/codeExecution/index.js'
+import webHookRoutes from './routes/webHook/index.js'
+
+const limiter = rateLimit({
+	windowMs: 1 * 60 * 1000, // 15 minutes
+	limit: 4, 
+	standardHeaders: 'draft-8', 
+	legacyHeaders: false, 
+	ipv6Subnet: 56, 
+})
 
 const app = express();
 
-app.use(cors({ origin: "http://localhost:3001",credentials:true }));
+app.use(cors({ origin: ["http://localhost:3001","http://localhost:3000"], credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-console.log('On Server');
+
+
 
 
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/code-execution',codeExecutionRoutes)
+app.use('/api/v1/code-execution',limiter, codeExecutionRoutes);
+app.use('/api/v1/webhook', webHookRoutes );
+
 
 
 app.listen(8080, () => {
