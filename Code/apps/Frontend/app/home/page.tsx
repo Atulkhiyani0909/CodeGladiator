@@ -12,7 +12,8 @@ import {
   Zap,
   Terminal,
   Quote,
-  ChevronRight
+  ChevronRight,
+  Brain 
 } from 'lucide-react';
 import { GridBackground } from '../components/GridBackground';
 import { HistoryWidget } from '../components/HistoryWidget';
@@ -22,27 +23,19 @@ import { JourneyWidget } from '../components/JourneryWidget';
 import useAuth from '../store';
 import { useRouter } from 'next/navigation';
 
-
-
-
 const BattleDashboard = () => {
-
-const { user, isLoading, error, getUserData }: any = useAuth();
+  const { user, isLoading, error, getUserData }: any = useAuth();
   const router = useRouter();
 
-  
   useEffect(() => {
     getUserData();
   }, [getUserData]);
 
-
   useEffect(() => {
-
     if (!isLoading && !user) {
       router.push('/login');
     }
   }, [router, isLoading, user]);
-
 
   if (isLoading) {
     return (
@@ -52,22 +45,17 @@ const { user, isLoading, error, getUserData }: any = useAuth();
     );
   }
 
-
   if (error) {
     return <div className="text-red-500">Error: {error.message}</div>;
   }
 
-
   if (!user) return null;
-  
 
   return (
-    <div className=" min-h-screen font-sans text-gray-200 relative flex items-center justify-center p-4 lg:p-8">
+    <div className="min-h-screen font-sans text-gray-200 relative flex items-center justify-center p-4 lg:p-8">
       <GridBackground />
 
-
-      <div className="mt-12 relative z-10 w-full max-w-9xl grid grid-cols-1 md:grid-cols-12 gap-4 h-full md:h-[600px]">
-
+      <div className="mt-12 relative z-10 w-full max-w-9xl grid grid-cols-1 md:grid-cols-12 gap-4 h-full md:h-[650px]"> {/* Increased height slightly to accommodate new row */}
 
         <div className="md:col-span-3 flex flex-col gap-4 h-full">
           <BentoCard title="Recent Battles" icon={History} className="h-2/3">
@@ -79,24 +67,23 @@ const { user, isLoading, error, getUserData }: any = useAuth();
           </BentoCard>
         </div>
 
-
+     
         <div className="md:col-span-6 flex flex-col gap-4 h-full">
 
-
-          <div className="flex flex-col items-center justify-center py-6">
+          
+          <div className="flex flex-col items-center justify-center py-4">
             <h1 className="text-4xl font-black text-white tracking-tighter mb-1">
               CODE<span className="text-orange-500">GLADIATOR</span>
             </h1>
             <p className="text-xs text-gray-500 tracking-[0.2em] uppercase">The Arena Awaits</p>
           </div>
 
-
-
-
-          <div className="flex-1 grid grid-cols-2 gap-4 mt-2">
-            <button className="group relative bg-[#111] border border-white/5 rounded-2xl p-6 text-left hover:border-orange-500 transition-all overflow-hidden flex flex-col justify-end" onClick={()=>{
-              router.push('/codeBattle')
-            }}>
+        
+          <div className="grid grid-cols-2 gap-4 h-48"> 
+            <button 
+              className="group relative bg-[#111] border border-white/5 rounded-2xl p-6 text-left hover:border-orange-500 transition-all overflow-hidden flex flex-col justify-end" 
+              onClick={() => router.push('/codeBattle')}
+            >
               <div className="absolute top-4 right-4 p-3 bg-[#1a1a1a] rounded-xl text-gray-400 group-hover:text-orange-500 group-hover:bg-orange-500/10 transition-colors">
                 <Code2 size={24} />
               </div>
@@ -114,13 +101,32 @@ const { user, isLoading, error, getUserData }: any = useAuth();
             </button>
           </div>
 
+          
+          <button 
+            className="group relative w-full bg-[#111] border border-white/5 rounded-2xl p-5 flex items-center justify-between hover:border-orange-500/50 hover:bg-[#161616] transition-all"
+            onClick={() => router.push('/all-problems')}
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl group-hover:bg-blue-500/20 transition-colors">
+                <Brain size={24} />
+              </div>
+              <div className="text-left">
+                <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">Training Ground</h3>
+                <p className="text-xs text-gray-500">Solve DSA Problems & Master Algorithms</p>
+              </div>
+            </div>
+            <div className="bg-[#1a1a1a] p-2 rounded-full text-gray-500 group-hover:text-white transition-colors">
+              <ChevronRight size={20} />
+            </div>
+          </button>
 
-          <BentoCard title="Gladiator Journey" icon={Map} className="h-32">
-
+         
+          <BentoCard title="Gladiator Journey" icon={Map} className="flex-1 min-h-[120px]">
+            <JourneyWidget />
           </BentoCard>
         </div>
 
-
+       
         <div className="md:col-span-3 flex flex-col gap-4 h-full">
           <BentoCard title="Global Status" icon={Trophy} className="h-full">
             <div className="space-y-4">

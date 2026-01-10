@@ -13,6 +13,9 @@ export default class Submission{
             where:{
                 userId:userId,
                 problemId:problemId
+            },
+            orderBy:{
+                createdAt:'desc'
             }
         })
 

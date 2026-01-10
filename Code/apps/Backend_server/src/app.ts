@@ -14,9 +14,10 @@ import authRoutes from './routes/auth.js';
 import codeExecutionRoutes from './routes/codeExecution/index.js'
 import webHookRoutes from './routes/webHook/index.js'
 import SubmissionRoutes from './routes/submissions/index.js'
+import ProblemsRoutes from './routes/problems/index.js'
 
 const limiter = rateLimit({
-	windowMs: 1 * 60 * 1000, // 15 minutes
+	windowMs: 1 * 60 * 1000, 
 	limit: 4, 
 	standardHeaders: 'draft-8', 
 	legacyHeaders: false, 
@@ -38,7 +39,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/code-execution',limiter, codeExecutionRoutes);
 app.use('/api/v1/webhook', webHookRoutes );
 app.use('/api/v1/submission',SubmissionRoutes);
-
+app.use('/api/v1/problem',ProblemsRoutes);
 
 
 app.listen(8080, () => {

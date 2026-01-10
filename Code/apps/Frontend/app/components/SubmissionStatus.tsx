@@ -1,9 +1,9 @@
 import React from 'react';
 import { CheckCircle2, XCircle, Clock, FileCode, ChevronRight, AlertTriangle } from 'lucide-react';
 
-function SubmissionStatus({ submissions , onCode }: any) {
+function SubmissionStatus({ submissions, onCode }: any) {
 
- 
+
     const getRelativeTime = (dateString: any) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -20,7 +20,7 @@ function SubmissionStatus({ submissions , onCode }: any) {
         return "Just now";
     };
 
- 
+
     const getStatusStyles = (status: any) => {
         switch (status) {
             case 'ACCEPTED':
@@ -76,18 +76,18 @@ function SubmissionStatus({ submissions , onCode }: any) {
     };
 
     return (
-      
-        <div className="w-1/2 px-6 py-2 flex flex-col h-[85vh]"> 
-            
-           
-            <div className="sticky top-0 z-10 bg-[#0f0f0f] pt-12 pb-4 ">
+
+        <div className="w-full px-4 py-4 flex flex-col h-[85vh]">
+
+
+            <div className="sticky top-0 z-10 bg-[#0f0f0f] pt-1 pb-4 ">
                 <br />
                 <h3 className="text-lg font-bold text-white border-l-4 border-orange-500 pl-3">
                     Submission History
                 </h3>
             </div>
 
-           
+
             <div className="flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar pb-10 flex-1">
                 {submissions.length === 0 ? (
                     <div className="text-gray-500 text-sm italic py-4 text-center border border-dashed border-gray-800 rounded-lg">
@@ -110,10 +110,12 @@ function SubmissionStatus({ submissions , onCode }: any) {
                             <div
                                 key={sub.id}
                                 className={`
-                                    relative flex items-center justify-between p-4 rounded-lg border 
-                                    ${style.bg} ${style.border} transition-all hover:brightness-110 group shrink-0
+                                    relative flex items-center justify-between p-4 rounded-lg border brightness-10
+                                    ${style.bg} ${style.border} transition-all hover:brightness-150 group shrink-0
                                 `}
-                            >
+                                onClick={() => {
+                                    onCode(sub.code);
+                                }}>
                                 <div className="flex items-center gap-4">
                                     <div className={`p-2 rounded-full bg-black/40 ${style.color}`}>
                                         {style.icon}
@@ -135,10 +137,8 @@ function SubmissionStatus({ submissions , onCode }: any) {
                                             {getRelativeTime(sub.createdAt)}
                                         </span>
                                     </div>
-                                    <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" onClick={()=>{
-                                        onCode(sub.code);
-                                    }} />
-                               
+                                    <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" />
+
                                 </div>
                             </div>
                         );
