@@ -3,11 +3,24 @@ import { createClient } from 'redis';
 import { loadProblemData } from './utils/problemLoader.js';
 import { executeDocker } from './utils/dockerRunner.js';
 import axios from 'axios';
+import cors from 'cors'
+import cookieParser from 'cookie-parser'
 
-const client = createClient();
 const app = express();
 
-const MAIN_SERVER_URL = 'http://localhost:8080';
+
+
+
+app.use(cors({ origin: ["http://localhost:3001","http://localhost:8080"], credentials: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+
+import BoilerPlateRoutes from './routes/index.js';
+app.use('/boilerplate',BoilerPlateRoutes);
+
+const client = createClient();
 
 async function main() {
     try {
@@ -87,6 +100,9 @@ async function main() {
     }
     
 }
+
+ const MAIN_SERVER_URL = 'http://localhost:8080';
+
 
 
 const saveStatus = async (jobId: string, isSuccess: boolean, executionResult: any) => {

@@ -15,6 +15,7 @@ import codeExecutionRoutes from './routes/codeExecution/index.js'
 import webHookRoutes from './routes/webHook/index.js'
 import SubmissionRoutes from './routes/submissions/index.js'
 import ProblemsRoutes from './routes/problems/index.js'
+import LanguageRoutes from './routes/languages/index.js'
 
 const limiter = rateLimit({
 	windowMs: 1 * 60 * 1000, 
@@ -40,7 +41,7 @@ app.use('/api/v1/code-execution',limiter, codeExecutionRoutes);
 app.use('/api/v1/webhook', webHookRoutes );
 app.use('/api/v1/submission',SubmissionRoutes);
 app.use('/api/v1/problem',ProblemsRoutes);
-
+app.use('/api/v1/language',LanguageRoutes);
 
 app.listen(8080, () => {
   console.log('Listening on port 8080');

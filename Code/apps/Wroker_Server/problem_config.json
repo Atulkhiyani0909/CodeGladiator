@@ -1,16 +1,16 @@
 {
-  "slug": "sum-of-array",
-  "name": "Sum of Array Elements",
-  "functionName": "arraySum",
+  "slug": "count-vowels",
+  "name": "Count Vowels in String",
+  "functionName": "countVowels",
   "inputs": [
-    { "name": "n", "type": "int" },
-    { "name": "arr", "type": "List<int>" }
+    { "name": "text", "type": "string" }
   ],
   "outputType": "int",
   "testCases": [
-    { "input": "5\n1 2 3 4 5", "output": "15" },
-    { "input": "3\n10 20 30", "output": "60" },
-    { "input": "1\n-5", "output": "-5" },
-    { "input": "4\n0 0 0 0", "output": "0" }
+    { "input": "hello world", "output": "3" },
+    { "input": "apple", "output": "2" },
+    { "input": "sky", "output": "0" },
+    { "input": "aeiou", "output": "5" },
+    { "input": "Python Programming", "output": "4" }
   ]
 }

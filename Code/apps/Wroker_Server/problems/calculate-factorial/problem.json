@@ -1,0 +1,12 @@
+{
+  "slug": "calculate-factorial",
+  "name": "Factorial of a Number",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "returnType": "long",
+  "totalTestCases": 5
+}

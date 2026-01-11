@@ -1,0 +1,9 @@
+120
+$$$DELIMITER$$$
+1
+$$$DELIMITER$$$
+1
+$$$DELIMITER$$$
+3628800
+$$$DELIMITER$$$
+6

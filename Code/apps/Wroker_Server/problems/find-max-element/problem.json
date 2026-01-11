@@ -1,0 +1,16 @@
+{
+  "slug": "find-max-element",
+  "name": "Find Maximum in Array",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "arr",
+      "type": "List<int>"
+    }
+  ],
+  "returnType": "int",
+  "totalTestCases": 5
+}

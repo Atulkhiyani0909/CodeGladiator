@@ -1,0 +1,9 @@
+9
+$$$DELIMITER$$$
+-5
+$$$DELIMITER$$$
+100
+$$$DELIMITER$$$
+7
+$$$DELIMITER$$$
+60

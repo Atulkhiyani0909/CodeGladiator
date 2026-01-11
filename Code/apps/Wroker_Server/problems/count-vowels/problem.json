@@ -1,0 +1,12 @@
+{
+  "slug": "count-vowels",
+  "name": "Count Vowels in String",
+  "params": [
+    {
+      "name": "text",
+      "type": "string"
+    }
+  ],
+  "returnType": "int",
+  "totalTestCases": 5
+}
