@@ -15,7 +15,7 @@ function DetailedSubmission({ submissionId, onBack }: any) {
         try {
           
             const res = await axios.get(`http://localhost:8080/api/v1/submission/${submissionId}`);
-            console.log(res.data.code);
+           
             
             const submission = res.data.code;
             
@@ -44,7 +44,7 @@ function DetailedSubmission({ submissionId, onBack }: any) {
         return () => clearInterval(pollInterval.current);
     }, [submissionId]);
 
-    console.log(data);
+ 
     
 
     if (loading && !data) {

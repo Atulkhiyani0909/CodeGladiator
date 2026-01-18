@@ -41,7 +41,7 @@ export function ProblemSection({ problemData }: any) {
     return (
         <div className="w-full h-full bg-[#0a0a0a] text-gray-300 overflow-y-auto custom-scrollbar p-6 pb-20">
             
-            {/* --- HEADER --- */}
+          
             <div className="mb-6 border-b border-gray-800 pb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
@@ -54,7 +54,7 @@ export function ProblemSection({ problemData }: any) {
                 </div>
             </div>
 
-            {/* --- BODY: Description --- */}
+          
             <div className="mb-8 space-y-4">
                 <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                     <span className="w-1 h-6 bg-orange-500 rounded-full"></span>
@@ -65,7 +65,7 @@ export function ProblemSection({ problemData }: any) {
                 </div>
             </div>
 
-            {/* --- EXAMPLES (Mapped from testCases) --- */}
+         
             <div className="mb-8 space-y-6">
                 <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                     <span className="w-1 h-6 bg-orange-500 rounded-full"></span>
@@ -79,7 +79,7 @@ export function ProblemSection({ problemData }: any) {
                         </h3>
                         
                         <div className="space-y-3 font-mono text-sm">
-                            {/* Input */}
+                          
                             <div className="flex flex-col gap-1">
                                 <span className="text-gray-500 select-none">Input:</span>
                                 <code className="bg-[#0f0f0f] px-3 py-2 rounded text-blue-300 block border border-gray-800/50 break-words whitespace-pre-wrap">
@@ -87,7 +87,7 @@ export function ProblemSection({ problemData }: any) {
                                 </code>
                             </div>
                             
-                            {/* Output */}
+                          
                             <div className="flex flex-col gap-1">
                                 <span className="text-gray-500 select-none">Output:</span>
                                 <code className="bg-[#0f0f0f] px-3 py-2 rounded text-green-400 block border border-gray-800/50">
@@ -99,7 +99,7 @@ export function ProblemSection({ problemData }: any) {
                 ))}
             </div>
 
-            {/* --- CONSTRAINTS (Only show if data exists) --- */}
+        
             {problem.constraints && problem.constraints.length > 0 && (
                 <div className="mb-8">
                     <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">

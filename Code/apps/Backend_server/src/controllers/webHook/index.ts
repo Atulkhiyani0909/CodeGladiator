@@ -6,7 +6,6 @@ export const saveStatusTODB = async  (req: Request) => {
   const { jobId } = req.params;
   const { success ,output } = req.body;
 
-  console.log(jobId , success ,output);
   
   if (!jobId) throw new Error("JobId  is required");
 
@@ -20,5 +19,4 @@ export const saveStatusTODB = async  (req: Request) => {
     }
   })
 
-  console.log(submission);
 };

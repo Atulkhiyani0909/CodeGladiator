@@ -21,25 +21,25 @@ async function startServer() {
     try {
         // 2. Connect to Redis FIRST
         await client.connect();
-        console.log("✅ Connected to Redis");
+        console.log(" Connected to Redis");
 
         // 3. Start Express Server (Listen for requests)
         app.listen(3000, () => {
-            console.log('🚀 Worker listening on port 3000');
-            console.log('👉 Routes available at http://localhost:3000/boilerplate');
+            console.log(' Worker listening on port 3000');
+            console.log('Routes available at http://localhost:3000/boilerplate');
         });
 
         // 4. Start the Background Worker Loop
-        runWorker();
+       
 
     } catch (err) {
-        console.error("❌ Failed to start server:", err);
+        console.error(" Failed to start server:", err);
     }
 }
 
 // Separate the worker logic so it doesn't block startup
 async function runWorker() {
-    console.log("👷 Worker loop started...");
+    console.log("Worker loop started...");
     
     while (true) {
         try {
@@ -48,7 +48,7 @@ async function runWorker() {
             
             // @ts-ignore
             const job = JSON.parse(submission.element);
-            console.log("📨 Processing Job:", job.id);
+            console.log(" Processing Job:", job.id);
 
             const problemFiles = await loadProblemData(job.problem.slug);
             const { fullInputs, fullOutputs } = problemFiles;
@@ -62,7 +62,7 @@ async function runWorker() {
             );
 
             console.log("---------------------------------");
-            console.log("🤖 Docker Execution Success:", executionResult.success);
+            console.log(" Docker Execution Success:", executionResult.success);
 
             let isCorrect = false;
             let finalOutput = "";
@@ -80,19 +80,19 @@ async function runWorker() {
                 finalOutput = userOutput;
 
                 if (isCorrect) {
-                    console.log(`✅ Job ${job.id} Passed!`);
+                    console.log(` Job ${job.id} Passed!`);
                 } else {
-                    console.log(`❌ Job ${job.id} Failed (Wrong Answer)`);
+                    console.log(` Job ${job.id} Failed (Wrong Answer)`);
                 }
             } else {
-                console.log(`❌ Job ${job.id} Failed (Runtime Error)`);
+                console.log(` Job ${job.id} Failed (Runtime Error)`);
                 finalOutput = executionResult.error || "";
             }
 
             await saveStatus(job.id, isCorrect, finalOutput);
 
         } catch (error:any) {
-            console.error(`⚠️ Worker Error:`, error.message);
+            console.error(` Worker Error:`, error.message);
             // Safety pause to prevent infinite loop crashes
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
@@ -107,11 +107,11 @@ const saveStatus = async (jobId, isSuccess, outputMessage) => {
             success: isSuccess,
             output: outputMessage
         });
-        console.log(`📡 Status sent to Main Server for ${jobId}`);
+        console.log(` Status sent to Main Server for ${jobId}`);
     } catch (err:any) {
-        console.error(`❌ Failed to update Main Server: ${err.message}`);
+        console.error(` Failed to update Main Server: ${err.message}`);
     }
 }
 
-
+ runWorker();
 startServer();

@@ -1,61 +1,47 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
-  Swords,
-  Ghost,
-  Code2,
-  Trophy,
-  History,
-  Flame,
-  Map,
-  Zap,
-  Terminal,
-  Quote,
-  ChevronRight,
-  Brain 
+  Swords, Ghost, Code2, Trophy, History, Flame, Map, Zap, Terminal, Quote, ChevronRight, Brain
 } from 'lucide-react';
 import { GridBackground } from '../components/GridBackground';
 import { HistoryWidget } from '../components/HistoryWidget';
 import { BentoCard } from '../components/BentoCards';
 import { MotivationWidget } from '../components/MotivationWidget';
 import { JourneyWidget } from '../components/JourneryWidget';
-import useAuth from '../store';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 
 const BattleDashboard = () => {
-  const { user, isLoading, error, getUserData }: any = useAuth();
+  const { isSignedIn, user, isLoaded } = useUser();
   const router = useRouter();
 
-  useEffect(() => {
-    getUserData();
-  }, [getUserData]);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+  
+    if (isLoaded && !isSignedIn) {
       router.push('/login');
     }
-  }, [router, isLoading, user]);
+  }, [isLoaded, isSignedIn, router]);
 
-  if (isLoading) {
+
+  if (!isLoaded || !isSignedIn) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center text-orange-500 font-mono animate-pulse">
-        Initializing Arena...
+      <div className="min-h-screen bg-[#050505] flex flex-col gap-4 items-center justify-center text-orange-500 font-mono">
+        <div className="w-12 h-12 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
+        <div className="animate-pulse tracking-widest uppercase text-xs">
+          {isLoaded ? "Redirecting to Login..." : "Authenticating..."}
+        </div>
       </div>
     );
   }
 
-  if (error) {
-    return <div className="text-red-500">Error: {error.message}</div>;
-  }
-
-  if (!user) return null;
 
   return (
     <div className="min-h-screen font-sans text-gray-200 relative flex items-center justify-center p-4 lg:p-8">
       <GridBackground />
 
-      <div className="mt-12 relative z-10 w-full max-w-9xl grid grid-cols-1 md:grid-cols-12 gap-4 h-full md:h-[650px]"> {/* Increased height slightly to accommodate new row */}
+      <div className="mt-12 relative z-10 w-full max-w-9xl grid grid-cols-1 md:grid-cols-12 gap-4 h-full md:h-[650px]">
 
         <div className="md:col-span-3 flex flex-col gap-4 h-full">
           <BentoCard title="Recent Battles" icon={History} className="h-2/3">
@@ -67,9 +53,7 @@ const BattleDashboard = () => {
           </BentoCard>
         </div>
 
-     
         <div className="md:col-span-6 flex flex-col gap-4 h-full">
-
           
           <div className="flex flex-col items-center justify-center py-4">
             <h1 className="text-4xl font-black text-white tracking-tighter mb-1">
@@ -78,7 +62,6 @@ const BattleDashboard = () => {
             <p className="text-xs text-gray-500 tracking-[0.2em] uppercase">The Arena Awaits</p>
           </div>
 
-        
           <div className="grid grid-cols-2 gap-4 h-48"> 
             <button 
               className="group relative bg-[#111] border border-white/5 rounded-2xl p-6 text-left hover:border-orange-500 transition-all overflow-hidden flex flex-col justify-end" 
@@ -101,7 +84,6 @@ const BattleDashboard = () => {
             </button>
           </div>
 
-          
           <button 
             className="group relative w-full bg-[#111] border border-white/5 rounded-2xl p-5 flex items-center justify-between hover:border-orange-500/50 hover:bg-[#161616] transition-all"
             onClick={() => router.push('/all-problems')}
@@ -120,13 +102,11 @@ const BattleDashboard = () => {
             </div>
           </button>
 
-         
           <BentoCard title="Gladiator Journey" icon={Map} className="flex-1 min-h-[120px]">
             <JourneyWidget />
           </BentoCard>
         </div>
 
-       
         <div className="md:col-span-3 flex flex-col gap-4 h-full">
           <BentoCard title="Global Status" icon={Trophy} className="h-full">
             <div className="space-y-4">

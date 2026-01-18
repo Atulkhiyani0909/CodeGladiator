@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle2, XCircle, Clock, FileCode, ChevronRight, AlertTriangle } from 'lucide-react';
 
-// 1. Accept the setter from props
+
 function SubmissionStatus({ submissions, setSelectedSubmission }: any) {
 
     const getRelativeTime = (dateString: any) => {
@@ -111,7 +111,7 @@ function SubmissionStatus({ submissions, setSelectedSubmission }: any) {
                                     ${style.bg} ${style.border} transition-all hover:brightness-150 group shrink-0
                                 `}
                                 onClick={() => {
-                                    // 2. Call the parent setter with the FULL object
+                                  
                                     if(setSelectedSubmission) {
                                         setSelectedSubmission(sub);
                                     }

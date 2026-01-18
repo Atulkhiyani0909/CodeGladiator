@@ -2,10 +2,12 @@ import type { Request, Response } from "express"
 import prisma from "../../DB/db.js";
 import client from "../../Redis/index.js";
 
+
+
 export default class Problems {
   getProblemById = async (req: Request, res: Response) => {
     const { id } = req.params;
-
+     
     try {
       if (!id) {
         return res.status(404).json({ msg: "Id is not Provided" })

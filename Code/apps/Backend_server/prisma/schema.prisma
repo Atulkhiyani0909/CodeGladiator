@@ -10,18 +10,13 @@ datasource db {
 
 // 1. USER MODEL
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
+  id        String   @id 
+  name  String?   @unique
   email     String   @unique
-  password  String?
 
-  thirdPartyAuthenticated Boolean @default(false)
-
-  
   battlesWon  Int      @default(0)
   battlesLost Int      @default(0)
-
-  refreshToken String?  
+ 
 
   // RELATIONSHIPS (The "Three Roles")
   // 1. Battles where they were Player A

@@ -9,6 +9,7 @@ export default class Languages{
 
             return res.status(200).json({msg:"All Languages",data:data});
           } catch (error) {
+            console.error(error);
              return res.status(500).json({msg:"Internal Server Error"});
           }
     }
