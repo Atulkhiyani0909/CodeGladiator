@@ -9,7 +9,7 @@ import client from './Redis/index.js';
 
 const app = express(); 
 
-app.use(cors({ origin: ["https://savings-rick-hearts-petite.trycloudflare.com","http://localhost:3001", "https://suites-calendar-returned-periods.trycloudflare.com"], credentials: true }));
+app.use(cors({ origin: ["http://localhost:3001"], credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
