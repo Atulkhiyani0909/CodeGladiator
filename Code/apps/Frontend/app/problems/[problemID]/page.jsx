@@ -3,29 +3,35 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import CodeEditor from '../../components/CodeEditor';
 import ProblemSection from '../../components/ProblemSection';
-import { Loader2, Play } from 'lucide-react';
+import { Loader2, Play, Swords, Timer,ArrowRight } from 'lucide-react';
 import axios from 'axios';
 import SubmissionStatus from '../../components/SubmissionStatus';
 import DetailedSubmission from '../../components/detailedSubmission';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
+import { useSocket } from '../../store/index'
+import { useBattleStore } from '../../store/battleStore'
 
 export default function Page() {
-
     const { getToken, userId, isLoaded } = useAuth();
     const { problemID } = useParams();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const { socket } = useSocket();
+    const { problems ,setProblems} = useBattleStore();
+
+    const battleId = searchParams.get('battleId');
+    const isBattleMode = !!battleId;
 
     const [languages, setLanguages] = useState([]);
     const [problemData, setProblemData] = useState({});
     const [allsubmissions, setSubmissions] = useState([]);
-
 
     const [disabled, setDisabled] = useState(false);
     const [theme, setTheme] = useState("vs-dark");
     const [fontSize, setFontSize] = useState(16);
     const [submissionTab, setSubmissionTab] = useState(false);
     const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
-
 
     const [selectedLang, setSelectedLang] = useState("javascript");
     const [selectedLangId, setSelectedLangId] = useState("");
@@ -34,13 +40,85 @@ export default function Page() {
 
 
     useEffect(() => {
+        if (!isBattleMode || !socket) return;
+
+
+
+        const handleBattleMsg = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.msg === "GAME_OVER") {
+                alert(`Battle Ended! Winner: ${data.data.winner}`);
+                router.push('/');
+            }
+        };
+
+        socket.addEventListener('message', handleBattleMsg);
+        return () => socket.removeEventListener('message', handleBattleMsg);
+    }, [isBattleMode, socket, router]);
+
+
+
+
+useEffect(() => {
+    if (!isBattleMode || !socket || !userId) return;
+
+    
+    const handleBattleState = (event) => {
+        const data = JSON.parse(event.data);
+        
+        switch (data.msg) {
+            case "GAME_STARTED":
+             
+                console.log("🔄 Synced Battle State:", data.data);
+                if (data.data.problems) {
+                    setProblems(data.data.problems); 
+                }
+                break;
+            
+            case "GAME_OVER":
+                alert(`Battle Ended! Winner: ${data.data.winner}`);
+                router.push('/');
+                break;
+
+            case "OPPONENT_PROGESS": 
+                console.log("Opponent solved a problem!");
+                break;
+        }
+    };
+
+
+    const handleRejoin = () => {
+        console.log("🔌 Joining/Rejoining Battle Room...");
+        socket.send(JSON.stringify({
+            msg: "JOIN",
+            roomID: battleId,
+            userID: userId
+        }));
+    };
+
+   
+    socket.addEventListener('message', handleBattleState);
+
+    if (socket.readyState === WebSocket.OPEN) {
+        handleRejoin();
+    } else {
+        socket.addEventListener('open', handleRejoin);
+    }
+
+ 
+    return () => {
+        socket.removeEventListener('message', handleBattleState);
+        socket.removeEventListener('open', handleRejoin);
+    };
+
+}, [isBattleMode, socket, userId, battleId, setProblems, router]);
+
+    useEffect(() => {
         const fetchData = async () => {
             try {
-
                 const langRes = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_SERVER_URL}/language/all-languages`);
                 const fetchedLanguages = langRes.data.data;
                 setLanguages(fetchedLanguages);
-
 
                 const defaultLang = fetchedLanguages.find((lang) => lang.name.toLowerCase() === "javascript");
                 if (defaultLang) {
@@ -49,7 +127,6 @@ export default function Page() {
                     setSelectedLang("javascript");
                     setSelectedLangId(fetchedLanguages[0].id);
                 }
-
 
                 const probRes = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_SERVER_URL}/problem/${problemID}`);
                 setProblemData(probRes.data.res);
@@ -65,12 +142,9 @@ export default function Page() {
 
     useEffect(() => {
         if (!problemData.slug || !selectedLang) return;
-
         const getBoilerPlateCode = async () => {
             try {
                 const res = await axios.get(`${process.env.NEXT_PUBLIC_WORKER_URL}/boilerplate/${problemData.slug}/${selectedLang}`);
-
-
                 setSubmissionCode(res.data.code);
             } catch (err) {
                 console.error("Error getting boilerplate", err);
@@ -81,36 +155,45 @@ export default function Page() {
 
 
 
+const handleNextProblem = () => {
+    if (!problems || problems.length === 0) return;
+
+  
+    const currentIndex = problems.findIndex(p => p === problemID);
+    console.log(currentIndex);
+    
+   
+    if (currentIndex !== -1 && currentIndex < problems.length - 1) {
+        const nextProblem = problems[currentIndex + 1];
+        router.push(`/problems/${nextProblem}?battleId=${battleId}`);
+    } else {
+        alert("You are on the last problem!");
+    }
+};
+
     const fetchSubmissionsList = useCallback(async () => {
-        if (!userId) return;
+        if (!userId || isBattleMode) return;
 
         try {
             const token = await getToken();
-
             let data = { userId: userId };
             let res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_SERVER_URL}/submission/status/${problemID}`, data, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-
-            if (res.data.data) {
-                setSubmissions(res.data.data);
-            }
+            if (res.data.data) setSubmissions(res.data.data);
         } catch (e) {
             console.error("Fetch error", e);
         }
-    }, [userId, problemID, getToken]);
-
+    }, [userId, problemID, getToken, isBattleMode]);
 
     useEffect(() => {
-
         fetchSubmissionsList();
 
-        const interval = setInterval(() => {
-            fetchSubmissionsList();
-        }, 10000);
-
-        return () => clearInterval(interval);
-    }, [fetchSubmissionsList]);
+        if (!isBattleMode) {
+            const interval = setInterval(fetchSubmissionsList, 10000);
+            return () => clearInterval(interval);
+        }
+    }, [fetchSubmissionsList, isBattleMode]);
 
 
 
@@ -125,21 +208,18 @@ export default function Page() {
         setCode(value);
     };
 
+
     const handleSubmit = async () => {
-        if (!userId) {
-            alert("Please login to submit");
-            return;
-        }
-        if (!selectedLangId) {
-            alert("Please select a language first");
-            return;
-        }
+        if (!userId) return alert("Please login to submit");
+        if (!selectedLangId) return alert("Please select a language first");
 
         setDisabled(true);
 
+
+
+
         try {
             const token = await getToken();
-
             let data = {
                 code: currcode,
                 languageId: selectedLangId,
@@ -151,16 +231,9 @@ export default function Page() {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-
             setSubmissionTab(true);
-
-
             const newSubmissionId = res.data.data?.id || res.data.result?.id;
-            if (newSubmissionId) {
-                setSelectedSubmissionId(newSubmissionId);
-            }
-
-
+            if (newSubmissionId) setSelectedSubmissionId(newSubmissionId);
             fetchSubmissionsList();
 
         } catch (error) {
@@ -179,9 +252,30 @@ export default function Page() {
         <div className="h-screen w-full bg-black text-white overflow-hidden flex flex-col">
 
 
-            <div className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-orange-500/30 h-16 flex items-center justify-center">
+            <div className={`fixed top-0 left-0 right-0 z-50 border-b h-16 flex items-center justify-center transition-colors
+                ${isBattleMode ? 'bg-orange-950/30 border-orange-500' : 'bg-black border-orange-500/30'}`}>
+
+
+                <div className="flex items-center gap-4 text-orange-500 animate-pulse font-bold tracking-widest">
+                    <Swords size={24} />
+                    <span>BATTLE IN PROGRESS</span>
+                    <br />
+                </div>
+
+{isBattleMode && problems.length > 0 && (
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+        <button
+            onClick={handleNextProblem}
+            className="flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-orange-500/50 hover:bg-zinc-800 text-orange-500 rounded-full font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] transition-all transform hover:scale-105"
+        >
+            Next Problem <ArrowRight size={18} />
+        </button>
+    </div>
+)}
+
                 <div className="flex justify-center gap-4">
-                    <button
+
+                    {!isBattleMode ? <button
                         onClick={() => {
                             setSubmissionTab(true);
                             setSelectedSubmissionId(null);
@@ -189,7 +283,7 @@ export default function Page() {
                         className={`px-6 py-2 rounded-full font-medium transition text-sm ${submissionTab ? "bg-yellow-400 text-black shadow-lg" : "bg-zinc-900 text-white border border-orange-500/40 hover:bg-zinc-800"}`}
                     >
                         Submissions
-                    </button>
+                    </button> : ""}
 
                     <button
                         onClick={() => setSubmissionTab(false)}
@@ -198,13 +292,14 @@ export default function Page() {
                         Problem
                     </button>
                 </div>
-            </div>
 
+            </div>
 
             <div className="flex flex-1 pt-16 h-full">
 
 
                 <div className="w-1/2 h-full overflow-y-auto custom-scrollbar border-r border-orange-500/20">
+
                     {!submissionTab && (
                         <ProblemSection problemData={problemData} />
                     )}
@@ -226,6 +321,7 @@ export default function Page() {
 
 
                 <div className="w-1/2 h-full flex flex-col bg-[#0f0f0f] relative border-l border-orange-500/30">
+
 
                     <div className="flex items-center justify-between px-4 py-3 border-b border-orange-500/20 bg-black shrink-0">
                         <select
@@ -259,7 +355,6 @@ export default function Page() {
                         </div>
                     </div>
 
-
                     <div className="flex-1 relative overflow-hidden">
                         <CodeEditor
                             language={selectedLang}
@@ -278,11 +373,15 @@ export default function Page() {
                             className={`absolute bottom-8 right-8 font-bold py-3 px-4 rounded-full flex items-center gap-2 z-20 transition-all
                                 ${disabled
                                     ? "bg-yellow-200 text-black/50 cursor-not-allowed shadow-none"
-                                    : "bg-yellow-400 text-black hover:bg-yellow-500 shadow-[0_0_20px_rgba(250,204,21,0.5)] transform hover:scale-105 active:scale-95"
-                                }`}
+                                    : isBattleMode
+
+                                        ? "bg-orange-600 text-white hover:bg-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.5)]"
+
+                                        : "bg-yellow-400 text-black hover:bg-yellow-500 shadow-[0_0_20px_rgba(250,204,21,0.5)]"
+                                } transform hover:scale-105 active:scale-95`}
                         >
                             {disabled ? <Loader2 className="animate-spin" size={20} /> : <Play size={20} />}
-                            {disabled ? "Running..." : "Submit Code"}
+                            {disabled ? "Running..." : isBattleMode ? "Submit Battle Code" : "Submit Code"}
                         </button>
                     ) : (
                         <div className="absolute bottom-8 right-8 bg-zinc-800 text-white px-4 py-2 rounded-full text-sm">

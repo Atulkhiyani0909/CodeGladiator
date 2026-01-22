@@ -20,13 +20,14 @@ import { MobileWarningOverlay } from '../components/MobileViewWarning';
 import { DifficultyCard } from '../components/DiffcultyCard';
 import { useSocket } from '../store';
 import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
 
 const DIFFICULTIES = [
-  { id: 'easy', label: 'Easy', icon: Zap, color: 'text-green-500', desc: 'Warmup drills' },
-  { id: 'medium', label: 'Medium', icon: Shield, color: 'text-yellow-500', desc: 'Standard interview' },
-  { id: 'hard', label: 'Hard', icon: Skull, color: 'text-red-500', desc: 'Grandmaster tier' },
-  { id: 'mixed', label: 'Mixed', icon: Shuffle, color: 'text-purple-500', desc: 'Random assortment' },
+  { id: 'EASY', label: 'Easy', icon: Zap, color: 'text-green-500', desc: 'Warmup drills' },
+  { id: 'MEDIUM', label: 'Medium', icon: Shield, color: 'text-yellow-500', desc: 'Standard interview' },
+  { id: 'HARD', label: 'Hard', icon: Skull, color: 'text-red-500', desc: 'Grandmaster tier' },
+  { id: 'MIXED', label: 'Mixed', icon: Shuffle, color: 'text-purple-500', desc: 'Random assortment' },
 ];
 
 const QUESTION_COUNTS = [1, 3, 5, 7];
@@ -38,57 +39,62 @@ const CreateBattleRoom = () => {
   const [questionCount, setQuestionCount] = useState(3);
   const [difficulty, setDifficulty] = useState('medium');
   const [isCreated, setIsCreated] = useState(false);
-  const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [roomId, setRoomId] = useState('');
 
-  const { connect, disconnect, socket } = useSocket();
+  const router = useRouter();
+
+  const {  socket } = useSocket();
   const { userId } = useAuth();
 
 
 
+
   useEffect(() => {
-    if (!userId) {
-      return;
-    } else {
-      connect(userId);
-    }
-  }, [userId]);
+    if (!socket) return;
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      switch (data.msg) {
+        case "ROOM_ID":
+          setRoomId(data.data);
+          setIsCreated(true);
+          setIsCreating(false);
+          break;
+        
+        case "ROOM_CREATED":
+          console.log(data.data);
+          break;
+        
+      }
+    };
+  }, [socket]);
 
   const handleCreate = () => {
     setIsCreating(true);
-    setTimeout(() => {
-      const mockRoomId = Math.random().toString(36).substring(7);
-      setInviteLink(`https://codegladiator.com/battle/${mockRoomId}`);
-      setIsCreated(true);
-      setIsCreating(false);
-    }, 1500);
+    if (socket) {
+      socket.send(JSON.stringify({ msg: "CREATE", userID: userId, Totalproblems: questionCount, BattleType: 'PRIVATE', difficulty: difficulty }));
+    }
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(inviteLink);
+    navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/battle/lobby/${roomId}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (socket) {
-    socket.onmessage = (event) => {
-      try {
-        console.log(event);
-      alert(event.data);
-      } catch (err) {
-        console.error("Failed to parse socket message:", err);
-      }
-    };
+  const handleRedirect = () => {
+    router.push(`/battle/lobby/${roomId}`);
   }
+
+
 
   return (
     <div className=" min-h-screen font-sans text-gray-200 relative bg-[#050505] flex flex-col items-center">
       <GridBackground />
       <MobileWarningOverlay />
-
       <div className="hidden lg:flex flex-col w-full max-w-6xl px-8 py-12 relative z-10">
-
         <div className="mt-10 mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-[10px] text-orange-400 font-mono mb-4 uppercase tracking-widest">
             <Lock size={12} /> Private Arena
@@ -101,13 +107,7 @@ const CreateBattleRoom = () => {
           </p>
         </div>
 
-        <input type="text" />
-        <button onClick={() => {
-          socket?.send(JSON.stringify({ msg: 'TEST', data: `Hello from the user with ID ${userId}` }));
-        }}>Send</button>
-
-        <div className='w-100 h-100'>This is the Message box
-
+        <div className='w-100 h-100'>
         </div>
         <div className="grid grid-cols-12 gap-8">
 
@@ -213,7 +213,7 @@ const CreateBattleRoom = () => {
                         <Globe size={16} className="text-gray-500" />
                         <input
                           readOnly
-                          value={inviteLink}
+                          value={`${process.env.NEXT_PUBLIC_FRONTEND_URL}/battle/lobby/${roomId}`}
                           className="bg-transparent text-sm text-white font-mono w-full focus:outline-none"
                         />
                       </div>
@@ -225,7 +225,7 @@ const CreateBattleRoom = () => {
                       </button>
                     </div>
 
-                    <button className="w-full py-3 bg-[#1a1a1a] hover:bg-[#222] border border-white/10 text-gray-300 hover:text-white font-bold text-sm uppercase tracking-wider rounded-xl transition-all">
+                    <button className="w-full py-3 bg-[#1a1a1a] hover:bg-[#222] border border-white/10 text-gray-300 hover:text-white font-bold text-sm uppercase tracking-wider rounded-xl transition-all" onClick={handleRedirect}>
                       Enter Lobby
                     </button>
                   </div>
