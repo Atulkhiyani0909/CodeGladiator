@@ -180,7 +180,7 @@ await subscriber.connect();
 
 const getProblemStatus = async (code: string, userId: string, languageId: string, problemId: string): Promise<SubmissionResult | null> => {
 
-   
+
     const result = await prisma.submission.create({
         data: { code, languageId, problemId, userId }
     });
@@ -196,10 +196,10 @@ const getProblemStatus = async (code: string, userId: string, languageId: string
     const channelName = `submission_result:${result.id}`;
     console.log(` Waiting for result on channel: ${channelName}`);
 
-   
+
     const val = await new Promise<SubmissionResult | null>((resolve) => {
 
-      
+
         const timeout = setTimeout(() => {
             console.log("Timeout waiting for execution result");
             subscriber.unsubscribe(channelName);
@@ -218,12 +218,12 @@ const getProblemStatus = async (code: string, userId: string, languageId: string
     });
 
     await prisma.submission.update({
-        where:{
-            id:result.id
+        where: {
+            id: result.id
         },
-        data:{
-            status:val?.status == 'ACCEPTED'?'ACCEPTED':"WRONG",
-            output:val?.output
+        data: {
+            status: val?.status == 'ACCEPTED' ? 'ACCEPTED' : "WRONG",
+            output: val?.output
         }
     })
 
@@ -446,7 +446,7 @@ wss.on('connection', async (ws, req: Request) => {
                     }
                 })
 
-                
+
 
 
                 room_.Users.forEach((e) => {
@@ -479,8 +479,68 @@ wss.on('connection', async (ws, req: Request) => {
                         data: room_identity.Users
                     }));
                 })
+                break;
 
+            case 'GAME_OVER':
 
+                const { roomId } = data;
+                let winnerId = null;
+                let maxSolved = -1;
+
+                let _room_ = room_map.get(roomId);
+
+                if (!_room_) return;
+
+                _room_.Users.forEach((user: Users) => {
+
+                    const solvedCount = Object.values(user.progress).filter(status => status === "SOLVED").length;
+
+                    if (solvedCount > maxSolved) {
+                        maxSolved = solvedCount;
+                        winnerId = user.id;
+                    }
+                });
+
+                if (!winnerId) {
+                    return;
+                }
+                _room_.battleInfo.winner = winnerId;
+
+                console.log(`🏆 Winner is User: ${winnerId} with ${maxSolved} problems solved.`);
+
+                _room_.Users.map((e) => {
+                    e.socket?.send(JSON.stringify({ msg: "GAME_OVER_WINNER", data: { winner: _room_.battleInfo.winner } }));
+                })
+
+                break;
+            case 'OPPONENT_LEAVING':
+                const _room = room_map.get(data.roomId);
+                const user_ = users.get(data.userId);
+
+                if (!_room) {
+                    return;
+                }
+
+                let winnerID = null;
+                _room?.Users.map((e) => {
+                    if (e.id != user_?.id) {
+                        winnerID = e.id;
+                    }
+                })
+
+                if (!winnerID) {
+                    return;
+                }
+
+                _room.battleInfo.winner = winnerID;
+
+                _room.Users.map((e) => {
+                    e.socket?.send(JSON.stringify({ msg: "GAME_OVER_WINNER", data: { winner: _room.battleInfo.winner } }));
+                })
+
+                break;
+
+                
             default:
                 console.log(`Wrong Input`);
         }
@@ -491,5 +551,5 @@ wss.on('connection', async (ws, req: Request) => {
     })
 
 
-    ws.send('Welcome to Gladiator');
+   
 })

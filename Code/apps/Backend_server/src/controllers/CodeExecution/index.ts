@@ -13,10 +13,19 @@ const codeSchema = z.object({
     problemId: z.string()
 })
 
+interface SubmissionResult {
+    status: string;
+    [key: string]: any;
+}
+
+const statusListener = client.duplicate();
+await statusListener.connect();
 
 
 class CodeExecution {
     executeCode = async (req: Request, res: Response) => {
+        console.log('Getting response via api ');
+        
         try {
             const { userId } = getAuth(req);
 
@@ -63,7 +72,36 @@ class CodeExecution {
             })
 
             const response = await client.lPush('Execution', JSON.stringify(codeTOSend));
+            const channelName = `submission_result:${result.id}`;
+            const val = await new Promise<SubmissionResult | null>((resolve) => {
 
+
+                const timeout = setTimeout(() => {
+                    console.log("Timeout waiting for execution result");
+                    statusListener.unsubscribe(channelName);
+                    resolve(null);
+                }, 10000);
+
+                statusListener.subscribe(channelName, (message) => {
+                    clearTimeout(timeout);
+                    console.log(" Received execution result:", message);
+
+                    const executionResult = JSON.parse(message);
+
+                    statusListener.unsubscribe(channelName);
+                    resolve(executionResult);
+                });
+            });
+
+            await prisma.submission.update({
+                where: {
+                    id: result.id
+                },
+                data: {
+                    status: val?.status == 'ACCEPTED' ? 'ACCEPTED' : "WRONG",
+                    output: val?.output
+                }
+            })
 
             if (!response) {
                 return res.status(500).json({ msg: "Unable to Send the Code to the Execution Server" });
