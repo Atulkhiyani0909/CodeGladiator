@@ -13,12 +13,14 @@ dotenv.config();
 
 
 import codeExecutionRoutes from './routes/codeExecution/index.js'
-import webHookRoutes from './routes/webHook/index.js'
 import SubmissionRoutes from './routes/submissions/index.js'
 import ProblemsRoutes from './routes/problems/index.js'
 import LanguageRoutes from './routes/languages/index.js'
 import { getOrCreateUser } from './utils/userSync.js';
 import { verifyToken } from '@clerk/clerk-sdk-node';
+import prisma from './DB/db.js';
+import client from './Redis/index.js';
+import { Prisma } from '@prisma/client';
 
 
 
@@ -52,7 +54,6 @@ const server = app.listen(8080, () => {
 
 
 app.use('/api/v1/code-execution', limiter, codeExecutionRoutes);
-app.use('/api/v1/webhook', webHookRoutes);
 app.use('/api/v1/submission', SubmissionRoutes);
 app.use('/api/v1/problem', ProblemsRoutes);
 app.use('/api/v1/language', LanguageRoutes);
@@ -60,10 +61,22 @@ app.use('/api/v1/language', LanguageRoutes);
 
 //WEBSOCKETS 
 
+enum ProblemStatus {
+    PENDING = "PENDING",
+    FAILED = "FAILED",
+    SOLVED = "SOLVED"
+}
+
+interface SubmissionResult {
+    status: string;
+    [key: string]: any;
+}
+
 interface Users {
     id: Id
     socket?: WebSocket,
-    history: Id[]
+    history: Id[],
+    progress: { [key: string]: ProblemStatus };
 }
 
 type Id = string
@@ -145,7 +158,6 @@ const problems = [
     "7188a325-0370-475d-a163-997b8f10c20d",
     "72f7622e-6fea-40f3-92f3-0648f25457ec",
     "933a8a7b-2902-48eb-ada9-723f52d3506a",
-    "9ac2bbcc-d24b-4fee-a19e-d9d77b6a78f2",
     "9ac2bbcc-d24b-4fee-a19e-d9d77b6a78f2"
 ]
 
@@ -162,6 +174,67 @@ const getRandomProblems = (problems: string[], numOfProblems: number): string[] 
 
 
 
+
+const subscriber = client.duplicate();
+await subscriber.connect();
+
+const getProblemStatus = async (code: string, userId: string, languageId: string, problemId: string): Promise<SubmissionResult | null> => {
+
+   
+    const result = await prisma.submission.create({
+        data: { code, languageId, problemId, userId }
+    });
+
+    const codeToSend = await prisma.submission.findUnique({
+        where: { id: result.id },
+        include: { language: true, problem: true }
+    });
+
+
+    await client.lPush('Execution', JSON.stringify(codeToSend));
+
+    const channelName = `submission_result:${result.id}`;
+    console.log(` Waiting for result on channel: ${channelName}`);
+
+   
+    const val = await new Promise<SubmissionResult | null>((resolve) => {
+
+      
+        const timeout = setTimeout(() => {
+            console.log("Timeout waiting for execution result");
+            subscriber.unsubscribe(channelName);
+            resolve(null);
+        }, 10000);
+
+        subscriber.subscribe(channelName, (message) => {
+            clearTimeout(timeout); // Stop the timer
+            console.log(" Received execution result:", message);
+
+            const executionResult = JSON.parse(message);
+
+            subscriber.unsubscribe(channelName);
+            resolve(executionResult);
+        });
+    });
+
+    await prisma.submission.update({
+        where:{
+            id:result.id
+        },
+        data:{
+            status:val?.status == 'ACCEPTED'?'ACCEPTED':"WRONG",
+            output:val?.output
+        }
+    })
+
+    if (!val) {
+        return null;
+    }
+    val.submissionID = result.id;
+
+    console.log(" Final Value:", val);
+    return val;
+}
 
 wss.on('connection', async (ws, req: Request) => {
     console.log('User Connected');
@@ -192,7 +265,8 @@ wss.on('connection', async (ws, req: Request) => {
         const UserData: Users = {
             id: userID,
             socket: ws,
-            history: []
+            history: [],
+            progress: {}
         }
 
         users.set(userID, UserData);
@@ -207,7 +281,7 @@ wss.on('connection', async (ws, req: Request) => {
 
 
 
-    ws.on("message", (msg: any, isBinary: any) => {
+    ws.on("message", async (msg: any, isBinary: any) => {
         const utf8String = isBinary
             ? new TextDecoder().decode(msg)
             : msg.toString();
@@ -249,6 +323,9 @@ wss.on('connection', async (ws, req: Request) => {
                 userDetails?.socket?.send(JSON.stringify({ msg: "ROOM_ID", data: roomID }));
 
                 userDetails?.socket?.send(JSON.stringify({ msg: "ROOM_CREATED", data: `Room Created Succesfully ${roomID}` }))
+
+
+
                 break;
 
             case "JOIN":
@@ -270,7 +347,7 @@ wss.on('connection', async (ws, req: Request) => {
                 const isAlreadyInRoom = room_details.Users.find((u) => u.id === user.id);
 
                 if (isAlreadyInRoom) {
-                    console.log(`🔄 User ${user.id} re-connected to active room.`);
+                    console.log(` User ${user.id} re-connected to active room.`);
 
                     isAlreadyInRoom.socket = user.socket!;
 
@@ -288,6 +365,8 @@ wss.on('connection', async (ws, req: Request) => {
                             data: "Welcome back! Waiting for opponent..."
                         }));
                     }
+
+
                     return;
                 }
 
@@ -329,6 +408,78 @@ wss.on('connection', async (ws, req: Request) => {
                     });
                 }
                 break;
+
+            case "SUBMIT_CODE":
+                const room_ = room_map.get(data.data.roomID);
+                const { code, userId: uId, languageId, problemId } = data.data;
+
+                if (!room_) {
+                    console.log("Room not found for submission");
+                    return;
+                }
+
+                console.log(`Processing submission for User ${uId} on Problem ${problemId}`);
+
+
+                const submissionResult = await getProblemStatus(code, uId, languageId, problemId);
+                console.log(submissionResult, 'this is the submission resutl ');
+
+                if (!submissionResult) {
+                    console.log("Submission failed or timed out");
+                    return;
+                }
+
+
+                const isSuccess = submissionResult.status === "ACCEPTED";
+
+
+
+
+                const currentUser = room_.Users.find((u) => u.id === uId);
+                if (currentUser) {
+                    currentUser.progress[problemId] = isSuccess ? ProblemStatus.SOLVED : ProblemStatus.FAILED;
+                }
+
+                room_.Users.map((e) => {
+                    if (e.id == userId) {
+                        e.socket?.send(JSON.stringify({ msg: "SUBMISSION_ID", submissionID: submissionResult.submissionID }))
+                    }
+                })
+
+                
+
+
+                room_.Users.forEach((e) => {
+                    e.socket?.send(JSON.stringify({
+                        msg: "ROOM_CURRENT_STATUS",
+                        data: room_.Users
+                    }));
+                });
+
+
+                const totalProblems = room_.battleInfo.problemsId.length;
+                const solvedCount = Object.values(currentUser?.progress || {}).filter(s => s === ProblemStatus.SOLVED).length;
+
+                if (solvedCount === totalProblems) {
+                    room_.Users.forEach((e) => {
+                        e.socket?.send(JSON.stringify({
+                            msg: "GAME_OVER",
+                            data: { winner: uId }
+                        }));
+                    });
+                }
+                break;
+
+            case "ROOM_CURRENT_STATUS":
+                let room_identity = room_map.get(data.roomID);
+
+                room_identity?.Users.forEach((e) => {
+                    e.socket?.send(JSON.stringify({
+                        msg: "ROOM_CURRENT_STATUS",
+                        data: room_identity.Users
+                    }));
+                })
+
 
             default:
                 console.log(`Wrong Input`);

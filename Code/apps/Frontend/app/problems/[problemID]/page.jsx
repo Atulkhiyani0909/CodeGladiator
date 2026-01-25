@@ -1,16 +1,44 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import CodeEditor from '../../components/CodeEditor';
 import ProblemSection from '../../components/ProblemSection';
-import { Loader2, Play, Swords, Timer,ArrowRight } from 'lucide-react';
+import { Loader2, Play, Swords, Timer, ArrowRight } from 'lucide-react';
 import axios from 'axios';
 import SubmissionStatus from '../../components/SubmissionStatus';
 import DetailedSubmission from '../../components/detailedSubmission';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { useSocket } from '../../store/index'
-import { useBattleStore } from '../../store/battleStore'
+import { useSocket } from '../../store/index';
+import { useBattleStore } from '../../store/battleStore';
+
+const BattleProgress = ({ label, problems, userProgress, align = 'left' }) => {
+    return (
+        <div className={`flex flex-col ${align === 'right' ? 'items-end' : 'items-start'} gap-1`}>
+            <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-wider flex items-center gap-1">
+                {label}
+            </span>
+            <div className="flex gap-1.5">
+                {problems.map((probId, idx) => {
+                    const status = userProgress?.[probId];
+                    let style = "bg-zinc-900 border-zinc-800 text-zinc-600";
+
+                    if (status === "SOLVED") {
+                        style = "bg-green-500/20 border-green-500 text-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]";
+                    } else if (status === "FAILED") {
+                        style = "bg-red-500/20 border-red-500 text-red-500";
+                    }
+
+                    return (
+                        <div key={idx} className={`w-6 h-6 rounded-md border flex items-center justify-center text-xs font-bold transition-all duration-500 ${style}`}>
+                            {status === "SOLVED" ? "✓" : status === "FAILED" ? "✗" : idx + 1}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 
 export default function Page() {
     const { getToken, userId, isLoaded } = useAuth();
@@ -18,100 +46,103 @@ export default function Page() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { socket } = useSocket();
-    const { problems ,setProblems} = useBattleStore();
+    const { problems, setProblems } = useBattleStore();
 
     const battleId = searchParams.get('battleId');
     const isBattleMode = !!battleId;
 
+    const [roomUsers, setRoomUsers] = useState([]);
     const [languages, setLanguages] = useState([]);
     const [problemData, setProblemData] = useState({});
     const [allsubmissions, setSubmissions] = useState([]);
-
     const [disabled, setDisabled] = useState(false);
     const [theme, setTheme] = useState("vs-dark");
     const [fontSize, setFontSize] = useState(16);
     const [submissionTab, setSubmissionTab] = useState(false);
     const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
-
     const [selectedLang, setSelectedLang] = useState("javascript");
     const [selectedLangId, setSelectedLangId] = useState("");
     const [currcode, setCode] = useState('');
     const [submissionCodeValue, setSubmissionCode] = useState("");
 
+    const myProfile = roomUsers.find(u => u.id === userId);
+    const opponentProfile = roomUsers.find(u => u.id !== userId);
+    const problemIds = problems.map(p => typeof p === 'string' ? p : p.id);
 
     useEffect(() => {
-        if (!isBattleMode || !socket) return;
+        if (!isBattleMode || !socket || !userId) return;
 
-
-
-        const handleBattleMsg = (event) => {
+        const handleBattleState = (event) => {
             const data = JSON.parse(event.data);
-            if (data.msg === "GAME_OVER") {
-                alert(`Battle Ended! Winner: ${data.data.winner}`);
-                router.push('/');
+
+            switch (data.msg) {
+                case "GAME_STARTED":
+                    if (data.data.problems) {
+                        setProblems(data.data.problems);
+                    }
+                    break;
+                case "GAME_OVER":
+                    alert(`Battle Ended! Winner: ${data.data.winner}`);
+                    router.push('/');
+                    break;
+                case "ROOM_CURRENT_STATUS":
+                    if (data.data && Array.isArray(data.data)) {
+                        setRoomUsers(data.data);
+                    }
+                    console.log(data.data);
+                    break;
+
+                case "SUBMISSION_ID":
+                    console.log('Subission request have received');
+                    
+                    setSubmissionTab(true);
+                    const newSubmissionId = data.submissionID;
+                    if (newSubmissionId) setSelectedSubmissionId(newSubmissionId);
+                    setDisabled(false)
+                    break;
             }
         };
 
-        socket.addEventListener('message', handleBattleMsg);
-        return () => socket.removeEventListener('message', handleBattleMsg);
-    }, [isBattleMode, socket, router]);
 
 
+        const handleRejoin = () => {
+            socket.send(JSON.stringify({
+                msg: "JOIN",
+                roomID: battleId,
+                userID: userId
+            }));
+        };
 
+        socket.addEventListener('message', handleBattleState);
 
-useEffect(() => {
-    if (!isBattleMode || !socket || !userId) return;
-
-    
-    const handleBattleState = (event) => {
-        const data = JSON.parse(event.data);
-        
-        switch (data.msg) {
-            case "GAME_STARTED":
-             
-                console.log("🔄 Synced Battle State:", data.data);
-                if (data.data.problems) {
-                    setProblems(data.data.problems); 
-                }
-                break;
-            
-            case "GAME_OVER":
-                alert(`Battle Ended! Winner: ${data.data.winner}`);
-                router.push('/');
-                break;
-
-            case "OPPONENT_PROGESS": 
-                console.log("Opponent solved a problem!");
-                break;
+        if (socket.readyState === WebSocket.OPEN) {
+            handleRejoin();
+        } else {
+            socket.addEventListener('open', handleRejoin);
         }
-    };
+
+        return () => {
+            socket.removeEventListener('message', handleBattleState);
+            socket.removeEventListener('open', handleRejoin);
+        };
+    }, [isBattleMode, socket, userId, battleId, setProblems, router]);
 
 
-    const handleRejoin = () => {
-        console.log("🔌 Joining/Rejoining Battle Room...");
+    useEffect(() => {
+
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+        console.log("📊 Requesting latest room status...");
+
+
         socket.send(JSON.stringify({
-            msg: "JOIN",
-            roomID: battleId,
-            userID: userId
+            msg: "ROOM_CURRENT_STATUS",
+            roomID: battleId
         }));
-    };
 
-   
-    socket.addEventListener('message', handleBattleState);
 
-    if (socket.readyState === WebSocket.OPEN) {
-        handleRejoin();
-    } else {
-        socket.addEventListener('open', handleRejoin);
-    }
+    }, [problemID, battleId, socket]);
 
- 
-    return () => {
-        socket.removeEventListener('message', handleBattleState);
-        socket.removeEventListener('open', handleRejoin);
-    };
-
-}, [isBattleMode, socket, userId, battleId, setProblems, router]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -130,7 +161,6 @@ useEffect(() => {
 
                 const probRes = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_SERVER_URL}/problem/${problemID}`);
                 setProblemData(probRes.data.res);
-
             } catch (err) {
                 console.error("Initialization Error", err);
             }
@@ -138,7 +168,6 @@ useEffect(() => {
 
         if (problemID) fetchData();
     }, [problemID]);
-
 
     useEffect(() => {
         if (!problemData.slug || !selectedLang) return;
@@ -153,27 +182,27 @@ useEffect(() => {
         getBoilerPlateCode();
     }, [selectedLang, problemData]);
 
+    const handleNextProblem = () => {
+        if (!problems || problems.length === 0) return;
+        setSubmissionTab(false);
+        let currentIndex = problems.findIndex(p => (typeof p === 'string' ? p : p.id) === problemID);
+         
+        if (currentIndex !== -1 && currentIndex < problems.length - 1) {
+
+            const nextProblem = problems[currentIndex + 1];
 
 
-const handleNextProblem = () => {
-    if (!problems || problems.length === 0) return;
-
-  
-    const currentIndex = problems.findIndex(p => p === problemID);
-    console.log(currentIndex);
-    
-   
-    if (currentIndex !== -1 && currentIndex < problems.length - 1) {
-        const nextProblem = problems[currentIndex + 1];
-        router.push(`/problems/${nextProblem}?battleId=${battleId}`);
-    } else {
-        alert("You are on the last problem!");
-    }
-};
+            const nextId = typeof nextProblem === 'string' ? nextProblem : nextProblem.id;
+            router.push(`/problems/${nextId}?battleId=${battleId}`);
+        } else {
+            const nextProblem = problems[0];
+            const nextId = typeof nextProblem === 'string' ? nextProblem : nextProblem.id;
+            router.push(`/problems/${nextId}?battleId=${battleId}`);
+        }
+    };
 
     const fetchSubmissionsList = useCallback(async () => {
         if (!userId || isBattleMode) return;
-
         try {
             const token = await getToken();
             let data = { userId: userId };
@@ -188,14 +217,11 @@ const handleNextProblem = () => {
 
     useEffect(() => {
         fetchSubmissionsList();
-
         if (!isBattleMode) {
             const interval = setInterval(fetchSubmissionsList, 10000);
             return () => clearInterval(interval);
         }
     }, [fetchSubmissionsList, isBattleMode]);
-
-
 
     const handleLanguageChange = (e) => {
         const newName = e.target.value;
@@ -208,39 +234,52 @@ const handleNextProblem = () => {
         setCode(value);
     };
 
-
     const handleSubmit = async () => {
         if (!userId) return alert("Please login to submit");
         if (!selectedLangId) return alert("Please select a language first");
 
         setDisabled(true);
+        if (isBattleMode) {
+            socket.send(JSON.stringify({
+                msg: 'SUBMIT_CODE',
+                data: {
+                    userId: userId,
+                    problemId: problemID,
+                    roomID: battleId,
+                    code: currcode,
+                    languageId: selectedLangId
+                }
+            }));
+        }
+
+        else {
+            try {
+                const token = await getToken();
+                let data = {
+                    code: currcode,
+                    languageId: selectedLangId,
+                    userId: userId,
+                    problemId: problemID
+                };
+
+
+                const res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_SERVER_URL}/code-execution/execute`, data, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
 
 
 
+                setSubmissionTab(true);
+                const newSubmissionId = res.data.data?.id || res.data.result?.id;
+                if (newSubmissionId) setSelectedSubmissionId(newSubmissionId);
+                fetchSubmissionsList();
 
-        try {
-            const token = await getToken();
-            let data = {
-                code: currcode,
-                languageId: selectedLangId,
-                userId: userId,
-                problemId: problemID
-            };
-
-            const res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_SERVER_URL}/code-execution/execute`, data, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            setSubmissionTab(true);
-            const newSubmissionId = res.data.data?.id || res.data.result?.id;
-            if (newSubmissionId) setSelectedSubmissionId(newSubmissionId);
-            fetchSubmissionsList();
-
-        } catch (error) {
-            console.error("Execution failed", error);
-            alert("Submission failed. Please try again.");
-        } finally {
-            setDisabled(false);
+            } catch (error) {
+                console.error("Execution failed", error);
+                alert("Submission failed. Please try again.");
+            } finally {
+                setDisabled(false);
+            }
         }
     };
 
@@ -250,60 +289,54 @@ const handleNextProblem = () => {
 
     return (
         <div className="h-screen w-full bg-black text-white overflow-hidden flex flex-col">
-
-
             <div className={`fixed top-0 left-0 right-0 z-50 border-b h-16 flex items-center justify-center transition-colors
-                ${isBattleMode ? 'bg-orange-950/30 border-orange-500' : 'bg-black border-orange-500/30'}`}>
+                ${isBattleMode ? 'bg-orange-950/20 border-orange-500/30' : 'bg-black border-orange-500/30'}`}>
 
-
-                <div className="flex items-center gap-4 text-orange-500 animate-pulse font-bold tracking-widest">
-                    <Swords size={24} />
-                    <span>BATTLE IN PROGRESS</span>
-                    <br />
-                </div>
-
-{isBattleMode && problems.length > 0 && (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
-        <button
-            onClick={handleNextProblem}
-            className="flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-orange-500/50 hover:bg-zinc-800 text-orange-500 rounded-full font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] transition-all transform hover:scale-105"
-        >
-            Next Problem <ArrowRight size={18} />
-        </button>
-    </div>
-)}
-
-                <div className="flex justify-center gap-4">
-
-                    {!isBattleMode ? <button
-                        onClick={() => {
-                            setSubmissionTab(true);
-                            setSelectedSubmissionId(null);
-                        }}
-                        className={`px-6 py-2 rounded-full font-medium transition text-sm ${submissionTab ? "bg-yellow-400 text-black shadow-lg" : "bg-zinc-900 text-white border border-orange-500/40 hover:bg-zinc-800"}`}
-                    >
-                        Submissions
-                    </button> : ""}
-
-                    <button
-                        onClick={() => setSubmissionTab(false)}
-                        className={`px-6 py-2 rounded-full font-medium transition text-sm ${!submissionTab ? "bg-yellow-400 text-black shadow-lg" : "bg-zinc-900 text-white border border-orange-500/40 hover:bg-zinc-800"}`}
-                    >
-                        Problem
-                    </button>
-                </div>
-
+                {isBattleMode ? (
+                    <div className="flex items-center gap-8 bg-black/40 px-6 py-2 rounded-full border border-white/5 backdrop-blur-sm">
+                        <BattleProgress
+                            label="YOU"
+                            problems={problemIds}
+                            userProgress={myProfile?.progress}
+                            align="right"
+                        />
+                        <div className="flex flex-col items-center px-4 border-x border-white/10">
+                            <span className="text-zinc-500 text-[10px] font-bold">VS</span>
+                            <Timer size={14} className="text-orange-500 mt-1" />
+                        </div>
+                        <BattleProgress
+                            label="OPPONENT"
+                            problems={problemIds}
+                            userProgress={opponentProfile?.progress}
+                            align="left"
+                        />
+                    </div>
+                ) : (
+                    <div className="flex justify-center gap-4">
+                        <button
+                            onClick={() => {
+                                setSubmissionTab(true);
+                                setSelectedSubmissionId(null);
+                            }}
+                            className={`px-6 py-2 rounded-full font-medium transition text-sm ${submissionTab ? "bg-yellow-400 text-black shadow-lg" : "bg-zinc-900 text-white border border-orange-500/40 hover:bg-zinc-800"}`}
+                        >
+                            Submissions
+                        </button>
+                        <button
+                            onClick={() => setSubmissionTab(false)}
+                            className={`px-6 py-2 rounded-full font-medium transition text-sm ${!submissionTab ? "bg-yellow-400 text-black shadow-lg" : "bg-zinc-900 text-white border border-orange-500/40 hover:bg-zinc-800"}`}
+                        >
+                            Problem
+                        </button>
+                    </div>
+                )}
             </div>
 
             <div className="flex flex-1 pt-16 h-full">
-
-
                 <div className="w-1/2 h-full overflow-y-auto custom-scrollbar border-r border-orange-500/20">
-
                     {!submissionTab && (
                         <ProblemSection problemData={problemData} />
                     )}
-
                     {submissionTab && (
                         selectedSubmissionId ? (
                             <DetailedSubmission
@@ -319,10 +352,7 @@ const handleNextProblem = () => {
                     )}
                 </div>
 
-
                 <div className="w-1/2 h-full flex flex-col bg-[#0f0f0f] relative border-l border-orange-500/30">
-
-
                     <div className="flex items-center justify-between px-4 py-3 border-b border-orange-500/20 bg-black shrink-0">
                         <select
                             value={selectedLang}
@@ -335,7 +365,6 @@ const handleNextProblem = () => {
                                 </option>
                             ))}
                         </select>
-
                         <div className="flex items-center gap-4">
                             <select
                                 value={fontSize}
@@ -365,7 +394,6 @@ const handleNextProblem = () => {
                         />
                     </div>
 
-
                     {userId ? (
                         <button
                             disabled={disabled}
@@ -374,9 +402,7 @@ const handleNextProblem = () => {
                                 ${disabled
                                     ? "bg-yellow-200 text-black/50 cursor-not-allowed shadow-none"
                                     : isBattleMode
-
                                         ? "bg-orange-600 text-white hover:bg-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.5)]"
-
                                         : "bg-yellow-400 text-black hover:bg-yellow-500 shadow-[0_0_20px_rgba(250,204,21,0.5)]"
                                 } transform hover:scale-105 active:scale-95`}
                         >
@@ -390,6 +416,16 @@ const handleNextProblem = () => {
                     )}
                 </div>
             </div>
+            {isBattleMode && problems.length > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+                    <button
+                        onClick={handleNextProblem}
+                        className="flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-orange-500/50 hover:bg-zinc-800 text-orange-500 rounded-full font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] transition-all transform hover:scale-105"
+                    >
+                        Next Problem <ArrowRight size={18} />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
