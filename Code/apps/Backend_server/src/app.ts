@@ -76,7 +76,8 @@ interface Users {
     id: Id
     socket?: WebSocket,
     history: Id[],
-    progress: { [key: string]: ProblemStatus };
+    progress: { [key: string]: ProblemStatus },
+    inBattle?: boolean;
 }
 
 type Id = string
@@ -111,7 +112,9 @@ interface battleInfo {
     problemsId: string[],
     status: Status,
     difficulty: Difficulty,
-    BattleType: BattleType
+    BattleType: BattleType,
+    durationMins: number,
+    startTime?: number
 }
 
 
@@ -139,18 +142,23 @@ function haveMet(user1: Id, user2: Id): boolean {
 
 
 function findMatch(myUserID: Id): string | null {
-
     shuffleArray(users_queue);
+
     for (let i = 0; i < users_queue.length; i++) {
-        const potentialOpponent: any = users_queue[i];
-        if (potentialOpponent === myUserID) continue;
-        if (!haveMet(myUserID, potentialOpponent)) {
-            users_queue.splice(i, 1);
-            return potentialOpponent;
-        }
+        const opponentId = users_queue[i];
+        const opponent = users.get(opponentId!);
+
+        if (!opponent) continue;
+        if (opponentId === myUserID) continue;
+        if (opponent.inBattle) continue;
+        if (haveMet(myUserID, opponentId!)) continue;
+
+        users_queue.splice(i, 1);
+        return opponentId!;
     }
     return null;
 }
+
 
 const problems = [
     "1364fc28-307f-45d7-933b-a39fcc166546",
@@ -313,7 +321,8 @@ wss.on('connection', async (ws, req: Request) => {
                         problemsId: [],
                         status: Status.CREATED,
                         BattleType: data.BattleType,
-                        difficulty: data.difficulty
+                        difficulty: data.difficulty,
+                        durationMins: 1
                     }
                 });
 
@@ -356,7 +365,9 @@ wss.on('connection', async (ws, req: Request) => {
                             msg: "GAME_STARTED",
                             data: {
                                 problems: room_details.battleInfo.problemsId,
-                                isRejoin: true
+                                isRejoin: true,
+                                duration: room_details.battleInfo.durationMins,
+                                startTime: room_details.battleInfo.startTime
                             }
                         }));
                     } else {
@@ -366,7 +377,14 @@ wss.on('connection', async (ws, req: Request) => {
                         }));
                     }
 
-
+                    room_details?.Users.forEach((e) => {
+                        e.socket?.send(JSON.stringify({
+                            msg: "ROOM_CURRENT_STATUS",
+                            data: room_details.Users,
+                            startTime: room_details.battleInfo.startTime,
+                            duration: room_details.battleInfo.durationMins
+                        }));
+                    })
                     return;
                 }
 
@@ -396,16 +414,28 @@ wss.on('connection', async (ws, req: Request) => {
 
                     room_details.battleInfo.problemsId = problemsToSend;
 
-
+                    room_details.battleInfo.startTime = Date.now();
 
                     room_details.Users.forEach((u) => {
                         u.socket?.send(JSON.stringify({
                             msg: "GAME_STARTED",
                             data: {
-                                problems: problemsToSend
+                                problems: problemsToSend,
+                                startTime: Date.now(),
+                                duration: room_details.battleInfo.durationMins
                             }
                         }));
                     });
+
+                    room_details?.Users.forEach((e) => {
+                        e.socket?.send(JSON.stringify({
+                            msg: "ROOM_CURRENT_STATUS",
+                            data: room_details.Users,
+                            startTime: room_details.battleInfo.startTime,
+                            duration: room_details.battleInfo.durationMins
+                        }));
+                    })
+
                 }
                 break;
 
@@ -452,7 +482,9 @@ wss.on('connection', async (ws, req: Request) => {
                 room_.Users.forEach((e) => {
                     e.socket?.send(JSON.stringify({
                         msg: "ROOM_CURRENT_STATUS",
-                        data: room_.Users
+                        data: room_.Users,
+                        startTime: room_.battleInfo.startTime,
+                        duration: room_.battleInfo.durationMins
                     }));
                 });
 
@@ -463,7 +495,7 @@ wss.on('connection', async (ws, req: Request) => {
                 if (solvedCount === totalProblems) {
                     room_.Users.forEach((e) => {
                         e.socket?.send(JSON.stringify({
-                            msg: "GAME_OVER",
+                            msg: "GAME_OVER_WINNER",
                             data: { winner: uId }
                         }));
                     });
@@ -476,7 +508,9 @@ wss.on('connection', async (ws, req: Request) => {
                 room_identity?.Users.forEach((e) => {
                     e.socket?.send(JSON.stringify({
                         msg: "ROOM_CURRENT_STATUS",
-                        data: room_identity.Users
+                        data: room_identity.Users,
+                        startTime: room_identity.battleInfo.startTime,
+                        duration: room_identity.battleInfo.durationMins
                     }));
                 })
                 break;
@@ -540,7 +574,113 @@ wss.on('connection', async (ws, req: Request) => {
 
                 break;
 
+            case 'TIME_OVER':
+
+                let room_status = room_map.get(data.data);
+
+                let winnerId_ = null;
+                let maxSolved_ = -1;
+
+
+
+                if (!room_status) return;
+
+                room_status.Users.forEach((user: Users) => {
+
+                    const solvedCount = Object.values(user.progress).filter(status => status === "SOLVED").length;
+
+                    if (solvedCount > maxSolved_) {
+                        maxSolved_ = solvedCount;
+                        winnerId_ = user.id;
+                    }
+                });
+
+                if (!winnerId_) {
+                    return;
+                }
+                room_status.battleInfo.winner = winnerId_;
+
+                console.log(`🏆 Winner is User: ${winnerId_} with ${maxSolved_} problems solved.`);
+
+                room_status.Users.map((e) => {
+                    e.socket?.send(JSON.stringify({ msg: "GAME_OVER_WINNER", data: { winner: room_status.battleInfo.winner } }));
+                })
+
+                break;
+
+
+            case 'ANONYMOUS_BATTLE': {
+                const userid = data.data;
+                if (!userid) return;
+
+                const user_find = users.get(userid);
+                if (!user_find) return;
+
+               
+                if (user_find.inBattle) {
+                    return;
+                }
+
+                const partnerID = findMatch(userid);
+
+                if (!partnerID) {
+                    
+                    if (!users_queue.includes(userid)) {
+                        users_queue.push(userid);
+                    }
+
+                    user_find.socket?.send(JSON.stringify({
+                        msg: "WAITING_FOR_THE_OPPONENT"
+                    }));
+                    return;
+                }
+
+                const partnerUser = users.get(partnerID);
+                if (!partnerUser) return;
+
                 
+                user_find.inBattle = true;
+                partnerUser.inBattle = true;
+
+              
+                const myIndex = users_queue.indexOf(userid);
+                if (myIndex !== -1) users_queue.splice(myIndex, 1);
+
+                const newRoom = uuidv1();
+
+                user_find.history.push(partnerID);
+                partnerUser.history.push(userid);
+
+                const problems_ID = getRandomProblems(problems, 3);
+
+                room_map.set(newRoom, {
+                    Users: [user_find, partnerUser],
+                    battleInfo: {
+                        Totalproblems: 3,
+                        problemsId: problems_ID,
+                        status: Status.CREATED,
+                        BattleType: BattleType.PUBLIC,
+                        difficulty: Difficulty.MIXED,
+                        durationMins: 10
+                    }
+                });
+
+                const gameRoom = room_map.get(newRoom);
+                if (!gameRoom) return;
+
+                gameRoom.battleInfo.startTime = Date.now();
+
+                [user_find, partnerUser].forEach(u => {
+                    u.socket?.send(JSON.stringify({
+                        msg: "ROOM_DETAILS",
+                        firstProblem: gameRoom.battleInfo.problemsId[0],
+                        roomId: newRoom
+                    }));
+                });
+
+                break;
+            }
+
             default:
                 console.log(`Wrong Input`);
         }
@@ -551,5 +691,5 @@ wss.on('connection', async (ws, req: Request) => {
     })
 
 
-   
+
 })

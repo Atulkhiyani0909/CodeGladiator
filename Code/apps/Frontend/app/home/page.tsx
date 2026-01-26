@@ -11,11 +11,18 @@ import { MotivationWidget } from '../components/MotivationWidget';
 import { JourneyWidget } from '../components/JourneryWidget';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import { useSocket } from '../store';
+import { useAuth } from '@clerk/nextjs';
 
 const BattleDashboard = () => {
   const { isSignedIn, user, isLoaded } = useUser();
   const router = useRouter();
+  const {socket}=useSocket();
+  const {userId} = useAuth();
 
+  const handleAnonymousClick = async () =>{
+router.push('/anonymous/battle');
+  }
 
   useEffect(() => {
   
@@ -74,7 +81,7 @@ const BattleDashboard = () => {
               <p className="text-xs text-gray-500">Host private room</p>
             </button>
 
-            <button className="group relative bg-orange-600 rounded-2xl p-6 text-left hover:bg-orange-500 transition-all overflow-hidden flex flex-col justify-end shadow-lg shadow-orange-900/20">
+            <button onClick={handleAnonymousClick} className="group relative bg-orange-600 rounded-2xl p-6 text-left hover:bg-orange-500 transition-all overflow-hidden flex flex-col justify-end shadow-lg shadow-orange-900/20">
               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
               <div className="absolute top-4 right-4 p-3 bg-white/10 rounded-xl text-white">
                 <Ghost size={24} />

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import CodeEditor from '../../components/CodeEditor';
 import ProblemSection from '../../components/ProblemSection';
-import { Loader2, Play, Swords, Timer, ArrowRight, AlertTriangle,Trophy ,XCircle} from 'lucide-react';
+import { Loader2, Play, Swords, Timer, ArrowRight, AlertTriangle, Trophy, XCircle } from 'lucide-react';
 import axios from 'axios';
 import SubmissionStatus from '../../components/SubmissionStatus';
 import DetailedSubmission from '../../components/detailedSubmission';
@@ -12,6 +12,37 @@ import { useAuth } from '@clerk/nextjs';
 import { useSocket } from '../../store/index';
 import { useBattleStore } from '../../store/battleStore';
 
+const GameTimer = ({ startTime, duration , socket ,battleId}) => {
+    const [timeLeft, setTimeLeft] = useState("00:00");
+
+    useEffect(() => {
+        if (!startTime || !duration) return;
+
+        const endTime = new Date(startTime).getTime() + (duration * 60 * 1000);
+
+        const interval = setInterval(() => {
+            const now = Date.now();
+            const diff = endTime - now;
+
+            if (diff <= 0) {
+                setTimeLeft("00:00");
+                clearInterval(interval);
+                alert('time Over');
+                socket.send(JSON.stringify({msg:'TIME_OVER',data:battleId}));
+                
+            } else {
+                const m = Math.floor(diff / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                setTimeLeft(`${m}:${s < 10 ? '0' : ''}${s}`);
+            }
+        }, 1000);
+
+ 
+        return () => clearInterval(interval);
+    }, [startTime, duration]);
+
+    return <span className="text-orange-500 font-mono font-bold text-sm">{timeLeft}</span>;
+};
 
 const BattleProgress = ({ label, problems, userProgress, align = 'left' }) => {
     return (
@@ -71,6 +102,8 @@ export default function Page() {
     const opponentProfile = roomUsers.find(u => u.id !== userId);
     const problemIds = problems.map(p => typeof p === 'string' ? p : p.id);
     const [gameOverData, setGameOverData] = useState(null);
+    const [startTime, setStartTime] = useState();
+    const [duration, setDuration] = useState();
 
     const handleLeaveClick = () => {
         setShowLeaveModal(true);
@@ -85,16 +118,13 @@ export default function Page() {
             }));
         }
         setShowLeaveModal(false);
-       
     };
 
     const handleNextProblem = () => {
         if (!problems || problems.length === 0) return;
 
-
         setSubmissionTab(false);
         setSelectedSubmissionId(null);
-
 
         let currentIndex = problems.findIndex(p => (typeof p === 'string' ? p : p.id) === problemID);
 
@@ -102,13 +132,12 @@ export default function Page() {
         if (currentIndex !== -1 && currentIndex < problems.length - 1) {
             nextProblem = problems[currentIndex + 1];
         } else {
-            nextProblem = problems[0]; // Loop back to start or stay?
+            nextProblem = problems[0];
         }
 
         const nextId = typeof nextProblem === 'string' ? nextProblem : nextProblem.id;
         router.push(`/problems/${nextId}?battleId=${battleId}`);
     };
-
 
     useEffect(() => {
         if (!isBattleMode) return;
@@ -120,62 +149,41 @@ export default function Page() {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [isBattleMode]);
 
-
     useEffect(() => {
         if (!isBattleMode || !socket || !userId) return;
-        const data = JSON.parse(event.data);
 
-        switch (data?.msg) {
-            case "GAME_STARTED":
-                if (data.data.problems) setProblems(data.data.problems);
-                break;
-
-            case "GAME_OVER_WINNER":
-                const winnerID = data.data.winner;
-                if (winnerID === userId) {
-                    alert(`Battle Ended! Winner: You are the Winner! 🏆`);
-                } else {
-                    alert(`Battle Ended! Winner: Opponent has won. 😔`);
-                }
-                router.push('/');
-                break;
-
-            case "ROOM_CURRENT_STATUS":
-                if (data.data && Array.isArray(data.data)) {
-                    setRoomUsers(data.data);
-                }
-                break;
-
-            case "SUBMISSION_ID":
-                console.log('Submission ID received:', data.submissionID);
-                setSubmissionTab(true);
-                if (data.submissionID) setSelectedSubmissionId(data.submissionID);
-                setDisabled(false);
-                break;
-        }
         const handleBattleState = (event) => {
             const data = JSON.parse(event.data);
 
             switch (data.msg) {
                 case "GAME_STARTED":
-                    if (data.data.problems) setProblems(data.data.problems);
+                    if (data.data.problems) {
+                     
+                        
+                        setProblems(data.data.problems);
+                        setStartTime(data.data.startTime);
+                        console.log(data.data.durationMins);
+                        setDuration(data.data.durationMins);
+                    }
                     break;
 
                 case "GAME_OVER_WINNER":
                     const winnerID = data.data.winner;
                     const isWinner = winnerID === userId;
 
-
                     setGameOverData({
                         isWinner,
                         message: isWinner ? "You Won! Opponent Forfeited." : "Opponent Won the Battle."
                     });
-
                     break;
 
                 case "ROOM_CURRENT_STATUS":
                     if (data.data && Array.isArray(data.data)) {
                         setRoomUsers(data.data);
+                        setDuration(data.duration);
+                        setStartTime(data.startTime);
+                        console.log(data , "CURRENT STATUS");
+                        
                     }
                     break;
 
@@ -209,7 +217,6 @@ export default function Page() {
         };
     }, [isBattleMode, socket, userId, battleId, setProblems, router]);
 
-
     useEffect(() => {
         if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
@@ -218,7 +225,6 @@ export default function Page() {
             roomID: battleId
         }));
     }, [problemID, battleId, socket]);
-
 
     useEffect(() => {
         const fetchData = async () => {
@@ -256,7 +262,6 @@ export default function Page() {
         getBoilerPlateCode();
     }, [selectedLang, problemData]);
 
-
     const fetchSubmissionsList = useCallback(async () => {
         if (!userId || isBattleMode) return;
         try {
@@ -285,7 +290,6 @@ export default function Page() {
 
     const handleEditorChange = (value) => setCode(value);
 
-
     const handleSubmit = async () => {
         if (!userId) return alert("Please login to submit");
         if (!selectedLangId) return alert("Please select a language first");
@@ -304,7 +308,6 @@ export default function Page() {
                         languageId: selectedLangId
                     }
                 }));
-
             } else {
                 alert("Connection lost. Please refresh.");
                 setDisabled(false);
@@ -338,8 +341,6 @@ export default function Page() {
 
     return (
         <div className="h-screen w-full bg-black text-white overflow-hidden flex flex-col">
-
-
             <div className={`fixed top-0 left-0 right-0 z-50 border-b h-16 flex items-center justify-center transition-colors
                 ${isBattleMode ? 'bg-zinc-950/20 border-orange-500/30' : 'bg-black border-orange-500/30'}`}>
 
@@ -348,7 +349,10 @@ export default function Page() {
                         <BattleProgress label="YOU" problems={problemIds} userProgress={myProfile?.progress} align="right" />
                         <div className="flex flex-col items-center px-4 border-x border-white/10">
                             <span className="text-zinc-500 text-[10px] font-bold">VS</span>
-                            <Timer size={14} className="text-orange-500 mt-1" />
+                            <div className="flex items-center gap-1 mt-1">
+                                <Timer size={14} className="text-orange-500" />
+                                <GameTimer startTime={startTime} duration={duration} socket={socket} battleId={battleId}/>
+                            </div>
                         </div>
                         <BattleProgress label="OPPONENT" problems={problemIds} userProgress={opponentProfile?.progress} align="left" />
 
@@ -373,7 +377,6 @@ export default function Page() {
                     </div>
                 )}
             </div>
-
 
             <div className="flex flex-1 pt-16 h-full">
                 <div className="w-1/2 h-full overflow-y-auto custom-scrollbar border-r border-orange-500/20">
@@ -417,7 +420,6 @@ export default function Page() {
                 </div>
             </div>
 
-
             {showLeaveModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                     <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-6 max-w-sm w-full shadow-[0_0_30px_rgba(220,38,38,0.2)]">
@@ -444,18 +446,16 @@ export default function Page() {
                 </div>
             )}
 
-            {/* 🟢 NEW: Game Over Result Modal */}
             {gameOverData && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
                     <div className={`bg-zinc-900 border-2 rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col items-center text-center gap-6 
                         ${gameOverData.isWinner ? "border-green-500 shadow-green-500/20" : "border-red-500 shadow-red-500/20"}`}>
-                        
+
                         <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-2 
                             ${gameOverData.isWinner ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>
-                            {/* Make sure to import Trophy and XCircle from lucide-react */}
                             {gameOverData.isWinner ? <Trophy size={40} /> : <XCircle size={40} />}
                         </div>
-                        
+
                         <div>
                             <h2 className="text-3xl font-black italic tracking-tighter text-white mb-2">
                                 {gameOverData.isWinner ? "VICTORY!" : "DEFEAT"}
@@ -465,7 +465,7 @@ export default function Page() {
                             </p>
                         </div>
 
-                        <button 
+                        <button
                             onClick={() => router.push('/')}
                             className={`w-full py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]
                             ${gameOverData.isWinner ? "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/40" : "bg-zinc-800 hover:bg-zinc-700 text-white"}`}
@@ -476,7 +476,5 @@ export default function Page() {
                 </div>
             )}
         </div>
-
-        
     );
 }

@@ -5,7 +5,7 @@ import { useSocket } from '../../../store';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter, useParams } from 'next/navigation';
 import { useBattleStore } from '../../../store/battleStore';
-import ProblemList from '../../../all-problems/page';
+
 
 export default function LobbyPage() {
     const { id: roomId } = useParams();
