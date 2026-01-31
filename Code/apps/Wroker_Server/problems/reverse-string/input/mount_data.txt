@@ -1,9 +1,0 @@
-hello
-$$$DELIMITER$$$
-world
-$$$DELIMITER$$$
-a
-$$$DELIMITER$$$
-racecar
-$$$DELIMITER$$$
-12345

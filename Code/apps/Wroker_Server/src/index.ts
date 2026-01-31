@@ -43,11 +43,18 @@ async function runWorker() {
             
             // @ts-ignore
             const job = JSON.parse(submission.element);
+           
+            
             console.log("⚙️ Processing Job:", job.id);
 
          
             const problemFiles = await loadProblemData(job.problem.slug);
+
+           
+            
             const { fullInputs, fullOutputs } = problemFiles;
+
+            
 
             const executionResult = await executeDocker(
                 job.id,
@@ -65,6 +72,9 @@ async function runWorker() {
                 const DELIMITER = "$$$DELIMITER$$$";
                 let userOutput = (executionResult.output || "").trim();
                 const expectedOutput = fullOutputs.trim();
+
+              
+                
 
                 if (userOutput.endsWith(DELIMITER)) {
                     userOutput = userOutput.slice(0, -DELIMITER.length).trim();

@@ -1,7 +1,0 @@
-15
-$$$DELIMITER$$$
-60
-$$$DELIMITER$$$
--5
-$$$DELIMITER$$$
-0

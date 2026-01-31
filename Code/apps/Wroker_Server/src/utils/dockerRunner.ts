@@ -1,13 +1,12 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { LANGUAGE_CONFIG } from '../utils/languageConfig.js'; 
+import { LANGUAGE_CONFIG } from '../utils/languageConfig.js';
 
 const TEMP_DIR = path.join(process.cwd(), 'temp');
 const PROBLEM_DIR = path.join(process.cwd(), 'problems');
-const TIMEOUT_MS = 5000; // Reduced to 5s for faster feedback
+const TIMEOUT_MS = 5000;
 
-// Ensure temp directory exists
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
@@ -26,113 +25,156 @@ export const executeDocker = async (
     slug: string
 ): Promise<ExecutionResult> => {
 
-    return new Promise(async (resolve, reject) => {
-        // 1. VALIDATE LANGUAGE CONFIG
+    return new Promise(async (resolve) => {
+
         const config = LANGUAGE_CONFIG[language];
-        if (!config) {
-            return resolve({ success: false, error: `Language '${language}' not supported.` });
+        if (!config || !config.fileName) {
+            return resolve({
+                success: false,
+                error: `Invalid language configuration for '${language}'`
+            });
         }
 
         const uniqueId = `job_${jobId}`;
-        const codeFilename = config.fileName; 
-        const codeFilePath = path.join(TEMP_DIR, `${uniqueId}_${codeFilename}`);
-        const inputFilePath = path.join(TEMP_DIR, `${uniqueId}.txt`);
+
+        // 🔥 IMPORTANT: Java file name must be CONSTANT
+        const hostCodeFilename =
+            language === 'java'
+                ? config.fileName          // Run.java
+                : `${uniqueId}_${config.fileName}`;
+
+        const codeFilePath = path.join(TEMP_DIR, hostCodeFilename);
+        const inputFilePath = path.join(TEMP_DIR, `${uniqueId}_input.txt`);
 
         try {
-            // --- FIX 1: Correct Path Logic ---
-            // Matches structure: problems/{slug}/drivers/{language}/driver.js
-            const driverPath = path.join(PROBLEM_DIR, slug, 'drivers', language, `driver.${getExtension(language)}`);
-            
-            console.log(`🔍 Looking for driver at: ${driverPath}`);
+            const extension = getExtension(language);
 
-            if (!fs.existsSync(driverPath)) {
-                // If driver is missing, DO NOT RUN. It will just return empty output.
-                return resolve({ success: false, error: `System Error: Driver code not found for problem '${slug}'` });
+            const specificDriverPath = path.join(
+                PROBLEM_DIR,
+                slug,
+                'drivers',
+                language,
+                config.fileName
+            );
+
+            const genericDriverPath = path.join(
+                PROBLEM_DIR,
+                slug,
+                'drivers',
+                language,
+                `driver.${extension}`
+            );
+
+            let driverCode = '';
+
+            if (fs.existsSync(specificDriverPath)) {
+                driverCode = fs.readFileSync(specificDriverPath, 'utf-8');
+            } else if (fs.existsSync(genericDriverPath)) {
+                driverCode = fs.readFileSync(genericDriverPath, 'utf-8');
+            } else {
+                return resolve({
+                    success: false,
+                    error: `Driver not found for problem '${slug}'`
+                });
             }
 
-            // Combine User Code + Driver Code
-            const driverCode = fs.readFileSync(driverPath, 'utf-8');
-            const finalCode = `${userCode}\n\n${driverCode}`;
+            // 🧠 JAVA-SPECIFIC FIXES
+            if (language === 'java') {
+                // Force class name to Run
+                userCode = userCode.replace(
+                    /public\s+class\s+\w+/,
+                    'public class Run'
+                );
 
-            // Write files to Host Temp Dir
+                if (!driverCode.includes('//_USER_CODE_HERE_')) {
+                    return resolve({
+                        success: false,
+                        error: 'Java driver missing //_USER_CODE_HERE_ placeholder'
+                    });
+                }
+
+                driverCode = driverCode.replace('//_USER_CODE_HERE_', userCode);
+            }
+
+            const finalCode =
+                language === 'java'
+                    ? driverCode
+                    : `${userCode}\n\n${driverCode}`;
+
             fs.writeFileSync(codeFilePath, finalCode);
             fs.writeFileSync(inputFilePath, fullInputs);
 
-            // --- FIX 2: Docker Arguments ---
             const dockerArgs = [
                 'run',
-                '--rm',               // Remove container after run
-                '--network', 'none',  // No internet access
-                '--memory', '128m',   // Memory limit
-                '--cpus', '0.5',      // CPU limit
-                '-v', `${codeFilePath}:/app/${codeFilename}`, // Mount Code
-                '-v', `${inputFilePath}:/app/input.txt`,      // Mount Input
-                '-w', '/app',         // Set Working Directory (Crucial for relative paths)
-                config.image,         // Docker Image Name (e.g., node:18-alpine)
-                'sh', '-c', config.runCommand(codeFilename)   // Run Command
+                '--name', uniqueId,
+                '--rm',
+                '--network', 'none',
+                '--memory', '256m',
+                '--cpus', '0.5',
+                '-v', `${codeFilePath}:/app/${config.fileName}`,
+                '-v', `${inputFilePath}:/app/input.txt`,
+                '-w', '/app',
+                config.image,
+                'sh', '-c',
+                language === 'java'
+                    ? `javac ${config.fileName} && java -Xmx128m Run`
+                    : config.runCommand(config.fileName)
             ];
 
-            console.log(`🐳 Spawning Docker: ${language} for Job ${jobId}`);
-            
             const dockerProcess = spawn('docker', dockerArgs);
 
             let stdoutData = '';
             let stderrData = '';
             let isTimedOut = false;
 
-            // Timer to kill infinite loops
             const timer = setTimeout(() => {
                 isTimedOut = true;
-                console.error(`⏱️ Job ${jobId} Timed Out! Killing container...`);
-                dockerProcess.kill();
+                spawn('docker', ['kill', uniqueId]);
                 cleanupFiles(codeFilePath, inputFilePath);
                 resolve({ success: false, error: 'Time Limit Exceeded' });
             }, TIMEOUT_MS);
 
-            // Collect Output
-            dockerProcess.stdout.on('data', (data) => {
-                stdoutData += data.toString();
-            });
+            dockerProcess.stdout.on('data', d => stdoutData += d.toString());
+            dockerProcess.stderr.on('data', d => stderrData += d.toString());
 
-            dockerProcess.stderr.on('data', (data) => {
-                stderrData += data.toString();
-            });
-
-            // Handle Process Exit
             dockerProcess.on('close', (code) => {
                 clearTimeout(timer);
                 if (isTimedOut) return;
 
                 cleanupFiles(codeFilePath, inputFilePath);
 
-                console.log(`🏁 Job ${jobId} finished with code ${code}`);
-                
                 if (code !== 0) {
-                    // Runtime Error (e.g. Syntax Error)
-                    console.error(`❌ Docker Error (Code ${code}):`, stderrData);
-                    resolve({ success: false, error: stderrData || 'Runtime Error' });
+                    resolve({
+                        success: false,
+                        error: stderrData || 'Runtime Error'
+                    });
                 } else {
-                    // Success
-                    if (!stdoutData.trim()) {
-                        console.warn("⚠️ Container finished successfully but returned NO OUTPUT.");
-                    }
-                    resolve({ success: true, output: stdoutData });
+                    resolve({
+                        success: true,
+                        output: stdoutData.trim()
+                    });
                 }
             });
 
             dockerProcess.on('error', (err) => {
                 clearTimeout(timer);
                 cleanupFiles(codeFilePath, inputFilePath);
-                resolve({ success: false, error: `Docker Spawn Error: ${err.message}` });
+                resolve({
+                    success: false,
+                    error: `Docker Error: ${err.message}`
+                });
             });
 
-        } catch (error: any) {
-            resolve({ success: false, error: `Internal Server Error: ${error.message}` });
+        } catch (err: any) {
+            cleanupFiles(codeFilePath, inputFilePath);
+            resolve({
+                success: false,
+                error: `Internal Error: ${err.message}`
+            });
         }
     });
 };
 
-// Helper: Get extension
 const getExtension = (lang: string) => {
     switch (lang) {
         case 'javascript': return 'js';
@@ -141,15 +183,12 @@ const getExtension = (lang: string) => {
         case 'java': return 'java';
         default: return 'txt';
     }
-}
+};
 
-// Helper: Delete temp files
 const cleanupFiles = (...paths: string[]) => {
     paths.forEach(p => {
         try {
             if (fs.existsSync(p)) fs.unlinkSync(p);
-        } catch (e) {
-            console.error(`Failed to delete temp file: ${p}`);
-        }
+        } catch {}
     });
-}
+};

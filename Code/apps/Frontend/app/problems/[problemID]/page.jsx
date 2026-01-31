@@ -109,6 +109,7 @@ export default function Page() {
         setShowLeaveModal(true);
     };
 
+    
     const confirmLeave = () => {
         if (socket) {
             socket.send(JSON.stringify({
@@ -229,6 +230,8 @@ export default function Page() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+               
+                
                 const langRes = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_SERVER_URL}/language/all-languages`);
                 setLanguages(langRes.data.data);
 

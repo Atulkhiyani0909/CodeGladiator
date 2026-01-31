@@ -1,9 +1,0 @@
-olleh
-$$$DELIMITER$$$
-dlrow
-$$$DELIMITER$$$
-a
-$$$DELIMITER$$$
-racecar
-$$$DELIMITER$$$
-54321

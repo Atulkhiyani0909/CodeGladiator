@@ -39,10 +39,10 @@ export const Navbar = () => {
             />
           ) : (
             <button 
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/signup')}
               className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-bold border border-orange-500/30 rounded-full transition-all hover:border-orange-500 hover:shadow-[0_0_15px_rgba(234,88,12,0.2)]"
             >
-              Login
+              SignUp
             </button>
           )}
         </div>
