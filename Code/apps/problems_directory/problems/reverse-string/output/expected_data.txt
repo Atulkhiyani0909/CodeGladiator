@@ -1,4 +1,7 @@
-"olleh"$$$DELIMITER$$$
-"hannaH"$$$DELIMITER$$$
-"a"$$$DELIMITER$$$
-""$$$DELIMITER$$$
+"olleh"
+$$$DELIMITER$$$
+"hannaH"
+$$$DELIMITER$$$
+"a"
+$$$DELIMITER$$$
+""
