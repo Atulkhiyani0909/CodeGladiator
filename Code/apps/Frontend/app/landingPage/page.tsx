@@ -118,7 +118,7 @@ const CoreFeatures = () => {
     { title: "Real-time Battles", desc: "Live websocket connections for instant 1v1 feedback.", icon: Zap, size: "large" },
     { title: "Timed Challenges", desc: "Race against the clock and the compiler.", icon: Cpu, size: "small" },
     { title: "Polyglot Support", desc: "Python, C++, Java, JS - Bring your weapon of choice.", icon: Code, size: "small" },
-    { title: "Global Ranking", desc: "Elo-based matchmaking system.", icon: Globe, size: "large" },
+    { title: "Global Ranking", desc: " Matchmaking system.", icon: Globe, size: "large" },
   ];
 
   return (
@@ -176,8 +176,7 @@ const Benefits = () => (
             {[
               "Accelerate your problem-solving velocity.",
               "Battle-harden your interview skills.",
-              "Compete globally with elite developers.",
-              "Mint your legacy on the blockchain of fame."
+              "Compete  with elite Coders.",
             ].map((benefit, index) => (
               <div key={index} className="flex items-start gap-4 group">
                  <div className="mt-1 min-w-[20px]">

@@ -1,0 +1,15 @@
+5
+$$$DELIMITER$$$
+-1
+$$$DELIMITER$$$
+100
+$$$DELIMITER$$$
+5
+$$$DELIMITER$$$
+0
+$$$DELIMITER$$$
+1
+$$$DELIMITER$$$
+1000
+$$$DELIMITER$$$
+50

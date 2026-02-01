@@ -1,0 +1,16 @@
+{
+  "slug": "two-sum",
+  "name": "Two Sum",
+  "params": [
+    {
+      "name": "nums",
+      "type": "List<int>"
+    },
+    {
+      "name": "target",
+      "type": "int"
+    }
+  ],
+  "returnType": "List<int>",
+  "totalTestCases": 8
+}

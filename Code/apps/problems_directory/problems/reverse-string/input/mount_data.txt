@@ -1,0 +1,17 @@
+hello
+$$$DELIMITER$$$
+OpenAI
+$$$DELIMITER$$$
+racecar
+$$$DELIMITER$$$
+12345
+$$$DELIMITER$$$
+A man a plan
+$$$DELIMITER$$$
+!
+$$$DELIMITER$$$
+
+$$$DELIMITER$$$
+a
+$$$DELIMITER$$$
+Testing 123

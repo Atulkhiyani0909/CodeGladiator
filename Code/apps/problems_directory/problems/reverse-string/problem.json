@@ -1,0 +1,12 @@
+{
+  "slug": "reverse-string",
+  "name": "Reverse String",
+  "params": [
+    {
+      "name": "s",
+      "type": "string"
+    }
+  ],
+  "returnType": "string",
+  "totalTestCases": 9
+}

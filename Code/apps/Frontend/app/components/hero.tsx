@@ -30,7 +30,7 @@ export const Hero = () => {
           </h1>
           
           <p className="text-lg text-zinc-400 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-10 font-light">
-            Step into the arena where logic meets lethality. Compete in real-time algorithmic battles, climb the global ELO ladder, and earn your title as a Code Gladiator.
+            Step into the arena where logic meets lethality. Compete in real-time algorithmic battles, climb the  ladder, and earn your title as a Code Gladiator.
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">

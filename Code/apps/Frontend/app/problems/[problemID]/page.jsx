@@ -12,7 +12,7 @@ import { useAuth } from '@clerk/nextjs';
 import { useSocket } from '../../store/index';
 import { useBattleStore } from '../../store/battleStore';
 
-const GameTimer = ({ startTime, duration , socket ,battleId}) => {
+const GameTimer = ({ startTime, duration, socket, battleId }) => {
     const [timeLeft, setTimeLeft] = useState("00:00");
 
     useEffect(() => {
@@ -28,8 +28,8 @@ const GameTimer = ({ startTime, duration , socket ,battleId}) => {
                 setTimeLeft("00:00");
                 clearInterval(interval);
                 alert('time Over');
-                socket.send(JSON.stringify({msg:'TIME_OVER',data:battleId}));
-                
+                socket.send(JSON.stringify({ msg: 'TIME_OVER', data: battleId }));
+
             } else {
                 const m = Math.floor(diff / 60000);
                 const s = Math.floor((diff % 60000) / 1000);
@@ -37,7 +37,7 @@ const GameTimer = ({ startTime, duration , socket ,battleId}) => {
             }
         }, 1000);
 
- 
+
         return () => clearInterval(interval);
     }, [startTime, duration]);
 
@@ -109,7 +109,7 @@ export default function Page() {
         setShowLeaveModal(true);
     };
 
-    
+
     const confirmLeave = () => {
         if (socket) {
             socket.send(JSON.stringify({
@@ -159,8 +159,8 @@ export default function Page() {
             switch (data.msg) {
                 case "GAME_STARTED":
                     if (data.data.problems) {
-                     
-                        
+
+
                         setProblems(data.data.problems);
                         setStartTime(data.data.startTime);
                         console.log(data.data.durationMins);
@@ -183,8 +183,8 @@ export default function Page() {
                         setRoomUsers(data.data);
                         setDuration(data.duration);
                         setStartTime(data.startTime);
-                        console.log(data , "CURRENT STATUS");
-                        
+                        console.log(data, "CURRENT STATUS");
+
                     }
                     break;
 
@@ -230,8 +230,8 @@ export default function Page() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-               
-                
+
+
                 const langRes = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_SERVER_URL}/language/all-languages`);
                 setLanguages(langRes.data.data);
 
@@ -255,31 +255,31 @@ export default function Page() {
     useEffect(() => {
         if (!problemData.slug || !selectedLang) return;
         const getBoilerPlateCode = async () => {
-            let extension ;
+            let extension;
             try {
-                switch(selectedLang){
+                switch (selectedLang) {
                     case "python":
-                        extension="py"
+                        extension = "py"
                         break;
 
                     case "java":
-                        extension="java"
+                        extension = "java"
                         break;
-                        
+
                     case "cpp":
-                        extension="cpp"
+                        extension = "cpp"
                         break;
-                        
+
                     case "javascript":
-                        extension="js"    
+                        extension = "js"
                         break;
                     default:
                         alert("Error Wrong Language")
-                        break;    
+                        break;
                 }
                 const res = await axios.get(`https://raw.githubusercontent.com/Atulkhiyani0909/CodeGladiator/main/Code/apps/problems_directory/problems/${problemData.slug}/boilerplate/function.${extension}`);
-              
-               
+
+
                 setSubmissionCode(res.data);
             } catch (err) {
                 console.error("Error getting boilerplate", err);
@@ -377,7 +377,7 @@ export default function Page() {
                             <span className="text-zinc-500 text-[10px] font-bold">VS</span>
                             <div className="flex items-center gap-1 mt-1">
                                 <Timer size={14} className="text-orange-500" />
-                                <GameTimer startTime={startTime} duration={duration} socket={socket} battleId={battleId}/>
+                                <GameTimer startTime={startTime} duration={duration} socket={socket} battleId={battleId} />
                             </div>
                         </div>
                         <BattleProgress label="OPPONENT" problems={problemIds} userProgress={opponentProfile?.progress} align="left" />
@@ -393,12 +393,38 @@ export default function Page() {
                         </div>
                     </div>
                 ) : (
-                    <div className="flex justify-center gap-4">
-                        <button onClick={() => { setSubmissionTab(true); setSelectedSubmissionId(null); }} className={`px-6 py-2 rounded-full font-medium transition text-sm ${submissionTab ? "bg-yellow-400 text-black shadow-lg" : "bg-zinc-900 text-white border border-orange-500/40 hover:bg-zinc-800"}`}>
-                            Submissions
+                    <div className="flex justify-center items-center gap-3">
+
+                        <button
+                            onClick={() => router.push('/all-problems')}
+                            className="px-6 py-2 rounded-full font-medium text-sm bg-zinc-900 text-zinc-400 border border-zinc-800 hover:bg-zinc-800 hover:text-white transition-all"
+                        >
+                            ← Back
                         </button>
-                        <button onClick={() => setSubmissionTab(false)} className={`px-6 py-2 rounded-full font-medium transition text-sm ${!submissionTab ? "bg-yellow-400 text-black shadow-lg" : "bg-zinc-900 text-white border border-orange-500/40 hover:bg-zinc-800"}`}>
+
+
+                        <div className="w-px h-6 bg-zinc-800 mx-1"></div>
+
+
+                        <button
+                            onClick={() => setSubmissionTab(false)}
+                            className={`px-6 py-2 rounded-full font-medium transition-all text-sm ${!submissionTab
+                                    ? "bg-yellow-400 text-black shadow-[0_0_15px_rgba(250,204,21,0.4)]"
+                                    : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:bg-zinc-800 hover:text-white"
+                                }`}
+                        >
                             Problem
+                        </button>
+
+
+                        <button
+                            onClick={() => { setSubmissionTab(true); setSelectedSubmissionId(null); }}
+                            className={`px-6 py-2 rounded-full font-medium transition-all text-sm ${submissionTab
+                                    ? "bg-yellow-400 text-black shadow-[0_0_15px_rgba(250,204,21,0.4)]"
+                                    : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:bg-zinc-800 hover:text-white"
+                                }`}
+                        >
+                            Submissions
                         </button>
                     </div>
                 )}
@@ -492,7 +518,7 @@ export default function Page() {
                         </div>
 
                         <button
-                            onClick={() => router.push('/')}
+                            onClick={() => router.push('/home')}
                             className={`w-full py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]
                             ${gameOverData.isWinner ? "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/40" : "bg-zinc-800 hover:bg-zinc-700 text-white"}`}
                         >

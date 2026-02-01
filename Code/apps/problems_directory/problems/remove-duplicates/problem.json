@@ -1,0 +1,12 @@
+{
+  "slug": "remove-duplicates",
+  "name": "Remove Duplicates",
+  "params": [
+    {
+      "name": "nums",
+      "type": "List<int>"
+    }
+  ],
+  "returnType": "List<int>",
+  "totalTestCases": 8
+}

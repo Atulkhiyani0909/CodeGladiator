@@ -1,0 +1,12 @@
+{
+  "slug": "valid-parentheses",
+  "name": "Valid Parentheses",
+  "params": [
+    {
+      "name": "s",
+      "type": "string"
+    }
+  ],
+  "returnType": "bool",
+  "totalTestCases": 9
+}

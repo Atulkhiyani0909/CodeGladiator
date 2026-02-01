@@ -1,0 +1,17 @@
+true
+$$$DELIMITER$$$
+true
+$$$DELIMITER$$$
+false
+$$$DELIMITER$$$
+false
+$$$DELIMITER$$$
+true
+$$$DELIMITER$$$
+true
+$$$DELIMITER$$$
+false
+$$$DELIMITER$$$
+false
+$$$DELIMITER$$$
+true

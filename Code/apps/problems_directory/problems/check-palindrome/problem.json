@@ -1,0 +1,12 @@
+{
+  "slug": "check-palindrome",
+  "name": "Check Palindrome",
+  "params": [
+    {
+      "name": "text",
+      "type": "string"
+    }
+  ],
+  "returnType": "bool",
+  "totalTestCases": 9
+}

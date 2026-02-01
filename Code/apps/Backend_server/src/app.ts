@@ -160,22 +160,36 @@ function findMatch(myUserID: Id): string | null {
 }
 
 
-const problems = [
-    "1364fc28-307f-45d7-933b-a39fcc166546",
-    "7188a325-0370-475d-a163-997b8f10c20d"
-   
-]
 
-const getRandomProblems = (problems: string[], numOfProblems: number): string[] => {
-    let ans = [];
-    for (let i = 1; i <= numOfProblems; i++) {
-        const val = Math.floor(Math.random() * problems.length);
-        ans.push(problems[val]);
+const problemsAll = await prisma.problem.findMany({
+    select: {
+        id: true 
+    }
+});
+
+
+const allProblemIds = problemsAll.map(problem => problem.id);
+
+console.log(`Total Problems found: ${allProblemIds.length}`);
+
+
+const getRandomProblems = (allIds: string[], count: number): string[] => {
+  
+    if (count >= allIds.length) {
+        return allIds;
     }
 
-    //@ts-ignore
-    return ans;
+    const selectedIds = new Set<string>();
+
+   
+    while (selectedIds.size < count) {
+        const randomIndex = Math.floor(Math.random() * allIds.length);
+        selectedIds.add(allIds[randomIndex]!); 
+    }
+
+    return Array.from(selectedIds);
 }
+
 
 
 
@@ -311,6 +325,26 @@ wss.on('connection', async (ws, req: Request) => {
                 const roomID = uuidv1();
                 console.log(roomID);
 
+                let time ;
+                switch(data.difficulty){
+                    case "HARD":
+                        time=10
+                        break;
+                    
+                    case "MEDIUM":
+                        time=15   
+                        break;
+                     
+                        
+                    case "EASY":
+                        time=20
+                        break;
+                        
+                    default:
+                        time=12
+                        break;    
+                }
+
                 room_map.set(roomID, {
                     Users: [],
                     battleInfo: {
@@ -319,7 +353,7 @@ wss.on('connection', async (ws, req: Request) => {
                         status: Status.CREATED,
                         BattleType: data.BattleType,
                         difficulty: data.difficulty,
-                        durationMins: 1
+                        durationMins: time
                     }
                 });
 
@@ -406,7 +440,7 @@ wss.on('connection', async (ws, req: Request) => {
                     console.log("Room Full -> Starting Game");
 
                     const problemCount = room_details.battleInfo?.Totalproblems || 3;
-                    const problemsToSend = getRandomProblems(problems, problemCount);
+                    const problemsToSend = getRandomProblems(allProblemIds, problemCount);
 
 
                     room_details.battleInfo.problemsId = problemsToSend;
@@ -704,7 +738,7 @@ wss.on('connection', async (ws, req: Request) => {
                 user_find.history.push(partnerID);
                 partnerUser.history.push(userid);
 
-                const problems_ID = getRandomProblems(problems, 3);
+                const problems_ID = getRandomProblems(allProblemIds, 3);
 
                 room_map.set(newRoom, {
                     Users: [user_find, partnerUser],
@@ -714,7 +748,7 @@ wss.on('connection', async (ws, req: Request) => {
                         status: Status.CREATED,
                         BattleType: BattleType.PUBLIC,
                         difficulty: Difficulty.MIXED,
-                        durationMins: 10
+                        durationMins: 15
                     }
                 });
 

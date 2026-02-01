@@ -1,0 +1,12 @@
+{
+  "slug": "find-maximum",
+  "name": "Find Maximum Element",
+  "params": [
+    {
+      "name": "nums",
+      "type": "List<int>"
+    }
+  ],
+  "returnType": "int",
+  "totalTestCases": 8
+}

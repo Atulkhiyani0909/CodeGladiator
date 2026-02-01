@@ -1,16 +1,20 @@
 {
-  "slug": "count-vowels",
-  "name": "Count Vowels in String",
-  "functionName": "countVowels",
+  "slug": "intersection-arrays",
+  "name": "Intersection of Two Arrays",
+  "functionName": "intersection",
   "inputs": [
-    { "name": "text", "type": "string" }
+    { "name": "nums1", "type": "List<int>" },
+    { "name": "nums2", "type": "List<int>" }
   ],
-  "outputType": "int",
+  "outputType": "List<int>",
   "testCases": [
-    { "input": "hello world", "output": "3" },
-    { "input": "apple", "output": "2" },
-    { "input": "sky", "output": "0" },
-    { "input": "aeiou", "output": "5" },
-    { "input": "Python Programming", "output": "4" }
+    { "input": "[1, 2, 2, 1]\n[2, 2]", "output": "[2]" },
+    { "input": "[4, 9, 5]\n[9, 4, 9, 8, 4]", "output": "[9, 4]" },
+    { "input": "[1, 2, 3]\n[4, 5, 6]", "output": "[]" },
+    { "input": "[1, 2, 3]\n[1, 2, 3]", "output": "[1, 2, 3]" },
+    { "input": "[1]\n[1]", "output": "[1]" },
+    { "input": "[]\n[1, 2]", "output": "[]" },
+    { "input": "[10, 20]\n[20, 30]", "output": "[20]" },
+    { "input": "[1, 2, 3]\n[2, 3, 4]", "output": "[2, 3]" }
   ]
 }

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express"
 import prisma from "../../DB/db.js";
 import client from "../../Redis/index.js";
+import { getAuth } from "@clerk/express";
 
 
 
@@ -49,6 +50,7 @@ export default class Problems {
   getProblems = async (req: Request, res: Response) => {
     try {
 
+     
       const problemsCached = await client.get('problems');
       if (problemsCached) {
         return res.status(200).json({
@@ -56,7 +58,7 @@ export default class Problems {
           data: JSON.parse(problemsCached)
         })
       }
-      const problems = await prisma.problem.findMany({});
+      const problems = await prisma.problem.findMany();
 
       await client.set('problems', JSON.stringify(problems));
       client.expire('problems', 10000);

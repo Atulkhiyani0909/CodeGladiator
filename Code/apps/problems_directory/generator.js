@@ -350,9 +350,6 @@ ${cppReturn} ${functionName}(${cppParams}) {
 
     // Note: We use a static method because the Driver calls it directly inside main()
     const javaCode = `
-import java.util.*;
-import java.io.*;
-
 public static ${javaReturn} ${functionName}(${javaParams}) {
     // Write your code here
     ${javaDefault}

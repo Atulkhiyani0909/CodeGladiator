@@ -1,0 +1,16 @@
+{
+  "slug": "intersection-arrays",
+  "name": "Intersection of Two Arrays",
+  "params": [
+    {
+      "name": "nums1",
+      "type": "List<int>"
+    },
+    {
+      "name": "nums2",
+      "type": "List<int>"
+    }
+  ],
+  "returnType": "List<int>",
+  "totalTestCases": 8
+}

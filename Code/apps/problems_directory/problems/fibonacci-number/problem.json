@@ -1,0 +1,12 @@
+{
+  "slug": "fibonacci-number",
+  "name": "Fibonacci Number",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "returnType": "int",
+  "totalTestCases": 9
+}

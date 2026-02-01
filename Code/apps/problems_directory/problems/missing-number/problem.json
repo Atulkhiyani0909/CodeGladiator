@@ -1,0 +1,12 @@
+{
+  "slug": "missing-number",
+  "name": "Missing Number",
+  "params": [
+    {
+      "name": "nums",
+      "type": "List<int>"
+    }
+  ],
+  "returnType": "int",
+  "totalTestCases": 8
+}

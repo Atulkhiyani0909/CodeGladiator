@@ -5,6 +5,7 @@ import { Navbar } from "./components/navbar";
 import { Footer } from "./components/footer";
 import { ClerkProvider } from "@clerk/nextjs";
 import SocketManager from "./components/SocketManager";
+import { MobileWarningOverlay } from "./components/MobileViewWarning";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Navbar  />
+        <MobileWarningOverlay/>
         <SocketManager/>
         {children}
         <Footer />

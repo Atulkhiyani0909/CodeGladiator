@@ -1,0 +1,16 @@
+{
+  "slug": "power-function",
+  "name": "Power Function (x^n)",
+  "params": [
+    {
+      "name": "x",
+      "type": "float"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "returnType": "float",
+  "totalTestCases": 8
+}
