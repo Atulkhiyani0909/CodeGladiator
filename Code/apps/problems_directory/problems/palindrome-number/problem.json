@@ -1,0 +1,12 @@
+{
+  "slug": "palindrome-number",
+  "name": "Palindrome Number",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "returnType": "bool",
+  "totalTestCases": 5
+}

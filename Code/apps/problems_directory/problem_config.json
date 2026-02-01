@@ -1,19 +1,16 @@
 {
-  "slug": "remove-duplicates",
-  "name": "Remove Duplicates from Sorted Array",
-  "functionName": "removeDuplicates",
+  "slug": "valid-anagram",
+  "name": "Valid Anagram",
+  "functionName": "isAnagram",
   "inputs": [
-    { "name": "nums", "type": "List<int>" }
+    { "name": "s", "type": "string" },
+    { "name": "t", "type": "string" }
   ],
-  "outputType": "List<int>",
+  "outputType": "bool",
   "testCases": [
-    { "input": "[1, 1, 2]", "output": "[1, 2]" },
-    { "input": "[0, 0, 1, 1, 1, 2, 2, 3, 3, 4]", "output": "[0, 1, 2, 3, 4]" },
-    { "input": "[1, 1, 1, 1]", "output": "[1]" },
-    { "input": "[1, 2, 3]", "output": "[1, 2, 3]" },
-    { "input": "[]", "output": "[]" },
-    { "input": "[10, 10, 20]", "output": "[10, 20]" },
-    { "input": "[-1, -1, 0, 0, 2]", "output": "[-1, 0, 2]" },
-    { "input": "[1, 2, 2]", "output": "[1, 2]" }
+    { "input": { "s": "anagram", "t": "nagaram" }, "output": "true" },
+    { "input": { "s": "rat", "t": "car" }, "output": "false" },
+    { "input": { "s": "a", "t": "a" }, "output": "true" },
+    { "input": { "s": "ab", "t": "a" }, "output": "false" }
   ]
 }

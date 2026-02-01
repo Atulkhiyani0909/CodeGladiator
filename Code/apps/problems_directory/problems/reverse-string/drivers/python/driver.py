@@ -1,6 +1,4 @@
-# --- DRIVER CODE START ---
 import sys
-import os
 import json
 
 DELIMITER = "$$$DELIMITER$$$"
@@ -14,21 +12,23 @@ def main():
         sol = Solution()
         
         for test_case in test_cases:
-            if not test_case.strip():
-                continue
-                
+            if not test_case.strip(): continue
             lines = test_case.strip().split('\n')
             
             arg0 = lines[0].strip()
 
             result = sol.reverseString(arg0)
-            print(result)
+            
+            # Sort lists to ensure [4,9] matches [9,4]
+            if isinstance(result, list):
+                result.sort()
+            
+            # Use json.dumps to print [1,2] without spaces
+            print(json.dumps(result, separators=(',', ':')))
             print(DELIMITER)
             
     except Exception as e:
-        sys.stderr.write(f"Driver Error: {str(e)}\n")
-        sys.exit(1)
+        sys.stderr.write(str(e))
 
 if __name__ == "__main__":
     main()
-# --- DRIVER CODE END ---

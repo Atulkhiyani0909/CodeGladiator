@@ -181,11 +181,6 @@ const CreateBattleRoom = () => {
                   <span className="text-sm text-gray-500">Problems</span>
                   <span className="text-sm font-mono text-white">{questionCount}</span>
                 </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Est. Duration</span>
-                  <span className="text-sm font-mono text-orange-400">~{questionCount * 15} Mins</span>
-                </div>
               </div>
 
 

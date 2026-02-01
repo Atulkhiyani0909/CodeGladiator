@@ -1,0 +1,12 @@
+anagram
+nagaram
+$$$DELIMITER$$$
+rat
+car
+$$$DELIMITER$$$
+a
+a
+$$$DELIMITER$$$
+ab
+a
+$$$DELIMITER$$$

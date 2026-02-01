@@ -1,9 +1,0 @@
-hello world
-$$$DELIMITER$$$
-apple
-$$$DELIMITER$$$
-sky
-$$$DELIMITER$$$
-aeiou
-$$$DELIMITER$$$
-Python Programming

@@ -1,44 +1,83 @@
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <fstream> 
 
 using namespace std;
 
 // USER CODE WILL BE INJECTED HERE
 
-// Forward declaration just in case
 vector<int> twoSum(vector<int>, int);
+
+// Helper: Print Vector as [1,2,3] (No spaces)
+template <typename T>
+void printResult(const vector<T>& v) {
+    cout << "[";
+    for (size_t i = 0; i < v.size(); ++i) {
+        cout << v[i];
+        if (i < v.size() - 1) cout << ",";
+    }
+    cout << "]";
+}
+
+template <typename T>
+void printResult(const T& val) {
+    cout << val;
+}
 
 int main() {
     const string DELIMITER = "$$$DELIMITER$$$";
     
-    ifstream t("/app/input.txt");
     stringstream buffer;
-    buffer << t.rdbuf();
+    buffer << cin.rdbuf(); 
     string content = buffer.str();
+
+    // Use file reader if cin is empty (fallback)
+    if (content.empty()) {
+        ifstream t("/app/input.txt");
+        if(t.is_open()) {
+            stringstream fbuffer;
+            fbuffer << t.rdbuf();
+            content = fbuffer.str();
+        }
+    }
 
     size_t prev = 0;
     while (true) {
         size_t pos = content.find(DELIMITER, prev);
-        string testCase = (pos != string::npos)
-            ? content.substr(prev, pos - prev)
-            : content.substr(prev);
-
+        string testCase = (pos != string::npos) ? content.substr(prev, pos - prev) : content.substr(prev);
+        
+        // Cleanup whitespace
         testCase.erase(0, testCase.find_first_not_of(" \n\r\t"));
         testCase.erase(testCase.find_last_not_of(" \n\r\t") + 1);
 
         if (!testCase.empty()) {
             stringstream ss(testCase);
-
-            // Type List<int> not fully supported in simple driver generator yet
-                int arg1; ss >> arg1;
-
+            
+        vector<int> arg0;
+        string line0;
+        getline(ss, line0);
+        if (line0.size() >= 2 && line0.front() == '[' && line0.back() == ']') {
+            string inner = line0.substr(1, line0.size() - 2);
+            stringstream ss_line(inner);
+            string segment;
+            while(getline(ss_line, segment, ',')) {
+                if(!segment.empty()) {
+                    try { arg0.push_back(stoi(segment)); } catch(...) {}
+                }
+            }
+        }
+        int arg1; ss >> arg1;
+            
             auto result = twoSum(arg0, arg1);
-            cout << result << endl;
-            cout << DELIMITER << endl;
+            
+            // Sort result for set-based problems
+            // sort(result.begin(), result.end());
+
+            printResult(result);
+            cout << endl << DELIMITER << endl;
         }
 
         if (pos == string::npos) break;

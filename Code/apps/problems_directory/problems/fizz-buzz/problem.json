@@ -1,0 +1,12 @@
+{
+  "slug": "fizz-buzz",
+  "name": "Fizz Buzz",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "returnType": "List<string>",
+  "totalTestCases": 3
+}

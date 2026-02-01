@@ -1,6 +1,9 @@
 import java.io.*;
-import java.nio.file.*;
 import java.util.*;
+import java.util.stream.*;
+import java.nio.file.*; // <--- CRITICAL IMPORT
+import java.nio.file.Files; // Explicitly import Files to be safe
+import java.nio.file.Paths; // Explicitly import Paths to be safe
 
 public class Run {
 
@@ -10,38 +13,74 @@ public class Run {
         final String DELIMITER = "$$$DELIMITER$$$";
         final String INPUT_FILE = "/app/input.txt";
 
-        String content;
+        String content = "";
         try {
+            // Read file content safely
             content = Files.readString(Paths.get(INPUT_FILE));
-        } catch (IOException e) {
-            System.err.println("Input file not found");
-            return;
-        }
+        } catch (IOException e) { return; }
 
-        int prev = 0;
-        int pos;
+        // Regex split with safe delimiter escaping
+        String[] testCases = content.split(java.util.regex.Pattern.quote(DELIMITER));
 
-        while (true) {
-            pos = content.indexOf(DELIMITER, prev);
-            String testCase = (pos != -1)
-                ? content.substring(prev, pos)
-                : content.substring(prev);
+        for (String testCase : testCases) {
+            if (testCase.trim().isEmpty()) continue;
 
-            if (!testCase.trim().isEmpty()) {
-                Scanner scanner = new Scanner(testCase.trim());
+            Scanner scanner = new Scanner(testCase.trim());
+            try {
+                
+                String raw0 = scanner.hasNextLine() ? scanner.nextLine().trim() : "";
+                String arg0 = raw0;
+                if (arg0.length() >= 2 && arg0.startsWith("\"") && arg0.endsWith("\"")) {
+                    arg0 = arg0.substring(1, arg0.length() - 1);
+                }
 
-                String arg0 = scanner.next();
-
-                // Assuming static method
                 var result = reverseString(arg0);
-                System.out.println(result);
+                
+                // Sort Lists to ensure [4,9] matches [9,4]
+                if (result instanceof List) {
+                     Collections.sort((List<Integer>) result);
+                }
+
+                printResult(result);
+                System.out.println();
                 System.out.println(DELIMITER);
 
+            } catch (Exception e) {
+            } finally {
                 scanner.close();
             }
+        }
+    }
 
-            if (pos == -1) break;
-            prev = pos + DELIMITER.length();
+    private static List<Integer> parseIntegerList(String raw) {
+        if (raw == null || raw.isEmpty()) return new ArrayList<>();
+        if (raw.startsWith("[")) raw = raw.substring(1);
+        if (raw.endsWith("]")) raw = raw.substring(0, raw.length() - 1);
+        
+        raw = raw.trim();
+        if (raw.isEmpty()) return new ArrayList<>();
+        
+        String[] parts = raw.split("[,\\s]+");
+        List<Integer> list = new ArrayList<>();
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                try { list.add(Integer.parseInt(part.trim())); } catch(Exception e) {}
+            }
+        }
+        return list;
+    }
+
+    private static void printResult(Object result) {
+        if (result instanceof List) {
+            List<?> list = (List<?>) result;
+            System.out.print("[");
+            for (int i = 0; i < list.size(); i++) {
+                System.out.print(list.get(i));
+                if (i < list.size() - 1) System.out.print(",");
+            }
+            System.out.print("]");
+        } else {
+            System.out.print(result);
         }
     }
 }

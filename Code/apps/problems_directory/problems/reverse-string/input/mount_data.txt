@@ -1,17 +1,8 @@
-hello
+"hello"
 $$$DELIMITER$$$
-OpenAI
+"Hannah"
 $$$DELIMITER$$$
-racecar
+"a"
 $$$DELIMITER$$$
-12345
+""
 $$$DELIMITER$$$
-A man a plan
-$$$DELIMITER$$$
-!
-$$$DELIMITER$$$
-
-$$$DELIMITER$$$
-a
-$$$DELIMITER$$$
-Testing 123

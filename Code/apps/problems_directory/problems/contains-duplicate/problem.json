@@ -1,0 +1,12 @@
+{
+  "slug": "contains-duplicate",
+  "name": "Contains Duplicate",
+  "params": [
+    {
+      "name": "nums",
+      "type": "List<int>"
+    }
+  ],
+  "returnType": "bool",
+  "totalTestCases": 4
+}

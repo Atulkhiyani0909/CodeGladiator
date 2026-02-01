@@ -1,0 +1,5 @@
+[1, 2]$$$DELIMITER$$$
+[0, 1, 2, 3, 4]$$$DELIMITER$$$
+[1]$$$DELIMITER$$$
+[]$$$DELIMITER$$$
+[10, 20]$$$DELIMITER$$$

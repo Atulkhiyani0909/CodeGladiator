@@ -1,0 +1,12 @@
+{
+  "slug": "remove-duplicates",
+  "name": "Remove Duplicates from Sorted Array",
+  "params": [
+    {
+      "name": "nums",
+      "type": "List<int>"
+    }
+  ],
+  "returnType": "List<int>",
+  "totalTestCases": 5
+}

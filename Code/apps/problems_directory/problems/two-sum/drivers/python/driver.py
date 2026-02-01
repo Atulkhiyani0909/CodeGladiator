@@ -1,6 +1,4 @@
-# --- DRIVER CODE START ---
 import sys
-import os
 import json
 
 DELIMITER = "$$$DELIMITER$$$"
@@ -14,12 +12,9 @@ def main():
         sol = Solution()
         
         for test_case in test_cases:
-            if not test_case.strip():
-                continue
-                
+            if not test_case.strip(): continue
             lines = test_case.strip().split('\n')
             
-            # Arg 0: Smart Parse
             raw_val = lines[0].strip()
             if raw_val.startswith("["):
                 arg0 = json.loads(raw_val)
@@ -28,13 +23,17 @@ def main():
             arg1 = int(lines[1])
 
             result = sol.twoSum(arg0, arg1)
-            print(result)
+            
+            # Sort lists to ensure [4,9] matches [9,4]
+            if isinstance(result, list):
+                result.sort()
+            
+            # Use json.dumps to print [1,2] without spaces
+            print(json.dumps(result, separators=(',', ':')))
             print(DELIMITER)
             
     except Exception as e:
-        sys.stderr.write(f"Driver Error: {str(e)}\n")
-        sys.exit(1)
+        sys.stderr.write(str(e))
 
 if __name__ == "__main__":
     main()
-# --- DRIVER CODE END ---

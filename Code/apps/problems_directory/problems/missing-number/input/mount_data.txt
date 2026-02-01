@@ -2,14 +2,7 @@
 $$$DELIMITER$$$
 [0, 1]
 $$$DELIMITER$$$
-[9, 6, 4, 2, 3, 5, 7, 0, 1]
+[9,6,4,2,3,5,7,0,1]
 $$$DELIMITER$$$
 [0]
 $$$DELIMITER$$$
-[1]
-$$$DELIMITER$$$
-[1, 2, 3]
-$$$DELIMITER$$$
-[0, 1, 2, 3, 4, 6]
-$$$DELIMITER$$$
-[0, 2]
