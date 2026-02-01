@@ -73,6 +73,7 @@ async function runWorker() {
                 let userOutput = (executionResult.output || "").trim();
                 const expectedOutput = fullOutputs.trim();
 
+              console.log(userOutput , "Tour Output");
               
                 
 
@@ -94,6 +95,8 @@ async function runWorker() {
         } catch (error: any) {
             console.error(` Worker Error:`, error.message);
             // Safety pause
+            console.log(error);
+            
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }

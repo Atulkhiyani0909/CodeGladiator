@@ -1,29 +1,31 @@
-import fs from 'fs';
-import path from 'path';
+import axios from 'axios';
 
-
-const PROBLEMS_DIR = path.join(process.cwd(), 'problems');
-
-export const loadProblemData = (slug: string) => {
-    const problemPath = path.join(PROBLEMS_DIR, slug);
-    
-    
-    
-    if (!fs.existsSync(problemPath)) {
-        throw new Error(`Problem '${slug}' not found on server.`);
-    }
-
-    const inputPath = path.join(problemPath, '/input/mount_data.txt');
-    const outputPath = path.join(problemPath, '/output/expected_data.txt');
-
-  
-    
+export const loadProblemData = async (slug: string) => {
     try {
-        const fullInputs = fs.readFileSync(inputPath, 'utf-8');
-        const fullOutputs = fs.readFileSync(outputPath, 'utf-8');
+        // 1. Perform requests inside the try block so errors are caught
+        const [inputRes, outputRes] = await Promise.all([
+            axios.get(`https://raw.githubusercontent.com/Atulkhiyani0909/CodeGladiator/main/Code/apps/problems_directory/problems/${slug}/input/mount_data.txt`),
+            axios.get(`https://raw.githubusercontent.com/Atulkhiyani0909/CodeGladiator/main/Code/apps/problems_directory/problems/${slug}/output/expected_data.txt`)
+        ]);
 
+        // 2. Extract the actual text content using .data
+        // Axios stores the response body in the 'data' property
+        const fullInputs = inputRes.data;
+        const fullOutputs = outputRes.data;
+
+        // 3. Basic validation to ensure we didn't get an object/JSON by mistake
+        if (typeof fullInputs !== 'string' || typeof fullOutputs !== 'string') {
+            throw new Error("Invalid data format: Expected string content");
+        }
+
+        
         return { fullInputs, fullOutputs };
-    } catch (error) {
-        throw new Error(`Missing test files for problem '${slug}'.`);
+
+    } catch (error: any) {
+        console.error(`❌ Failed to load problem data for ${slug}:`, error.message);
+        // Throw a clean error message for your UI to handle
+        throw new Error(`Failed to load test cases for '${slug}'. Ensure the GitHub paths are correct.`);
     }
 };
+
+

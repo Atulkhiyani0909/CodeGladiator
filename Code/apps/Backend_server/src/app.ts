@@ -162,11 +162,8 @@ function findMatch(myUserID: Id): string | null {
 
 const problems = [
     "1364fc28-307f-45d7-933b-a39fcc166546",
-    "215766eb-7d19-4d07-977b-1f58c7b4de5d",
-    "7188a325-0370-475d-a163-997b8f10c20d",
-    "72f7622e-6fea-40f3-92f3-0648f25457ec",
-    "933a8a7b-2902-48eb-ada9-723f52d3506a",
-    "9ac2bbcc-d24b-4fee-a19e-d9d77b6a78f2"
+    "7188a325-0370-475d-a163-997b8f10c20d"
+   
 ]
 
 const getRandomProblems = (problems: string[], numOfProblems: number): string[] => {

@@ -255,9 +255,32 @@ export default function Page() {
     useEffect(() => {
         if (!problemData.slug || !selectedLang) return;
         const getBoilerPlateCode = async () => {
+            let extension ;
             try {
-                const res = await axios.get(`${process.env.NEXT_PUBLIC_WORKER_URL}/boilerplate/${problemData.slug}/${selectedLang}`);
-                setSubmissionCode(res.data.code);
+                switch(selectedLang){
+                    case "python":
+                        extension="py"
+                        break;
+
+                    case "java":
+                        extension="java"
+                        break;
+                        
+                    case "cpp":
+                        extension="cpp"
+                        break;
+                        
+                    case "javascript":
+                        extension="js"    
+                        break;
+                    default:
+                        alert("Error Wrong Language")
+                        break;    
+                }
+                const res = await axios.get(`https://raw.githubusercontent.com/Atulkhiyani0909/CodeGladiator/main/Code/apps/problems_directory/problems/${problemData.slug}/boilerplate/function.${extension}`);
+              
+               
+                setSubmissionCode(res.data);
             } catch (err) {
                 console.error("Error getting boilerplate", err);
             }
