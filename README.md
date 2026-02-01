@@ -2,7 +2,8 @@
 
 > **Where Code Meets Glory.** A real-time competitive programming arena built for developers to battle, rank up, and prove their algorithmic prowess.
 
-[https://drive.google.com/drive/my-drive]
+<img width="1904" height="834" alt="image" src="https://github.com/user-attachments/assets/0b048d7b-6222-499b-92be-04ee4a8f9928" />
+
 
 ## 🚀 Introduction
 
