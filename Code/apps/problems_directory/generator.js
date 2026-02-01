@@ -7,10 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // --- CONFIGURATION ---
-const CONFIG_FILE = "problem_config.json"; 
+const CONFIG_FILE = "problem_config.json";
 
 // Global Delimiter Definition
-const DELIMITER = "$$$DELIMITER$$$"; 
+const DELIMITER = "$$$DELIMITER$$$";
 
 // --- TYPE MAPPING ---
 const TYPE_MAP = {
@@ -23,33 +23,32 @@ const TYPE_MAP = {
     "void": { py: "None", js: "void", cpp: "void", java: "void" }
 };
 
-// Helper to get a safe default return value so boilerplate compiles
+// Helper: Default Return Values
 function getDefaultReturn(type, lang) {
     if (type === "void") return "";
     if (type === "int" || type === "float") return "return 0;";
     if (type === "bool") return "return false;";
     
-    // C++ specific defaults
     if (lang === 'cpp') {
         if (type === "string") return 'return "";';
-        if (type.includes("List")) return 'return {};';
+        if (type.includes("List") || type.includes("vector")) return 'return {};';
     }
     
-    // Java specific defaults
     if (lang === 'java') {
-        if (type === "string" || type.includes("List")) return 'return null;';
+        if (type === "string") return 'return "";';
+        if (type.includes("List")) return 'return new ArrayList<>();';
     }
 
-    return "return 0;"; // Fallback
+    return "return 0;";
 }
 
 // ==========================================
-// 1. SMART JAVASCRIPT DRIVER
+// 1. JAVASCRIPT DRIVER
 // ==========================================
 function getJsDriver(functionName, inputs) {
     const argParsingLogic = inputs.map((input, index) => {
-        if (input.type.includes("List") || input.type.includes("vector")) {
-            return `        // Arg ${index}: Smart Parse (JSON or Space-Separated)
+        if (input.type.includes("List")) {
+            return `        // Arg ${index}: List/Array
         let arg${index};
         const raw${index} = lines[${index}].trim();
         if (raw${index}.startsWith('[')) {
@@ -58,75 +57,62 @@ function getJsDriver(functionName, inputs) {
             arg${index} = raw${index}.split(/\\s+/).map(Number);
         }`;
         } else if (input.type === "int" || input.type === "float") {
-             return `        const arg${index} = Number(lines[${index}]);`;
+            return `        const arg${index} = Number(lines[${index}]);`;
         } else {
-             return `        const arg${index} = lines[${index}];`;
+            return `        const arg${index} = lines[${index}];`;
         }
     }).join("\n");
 
     const argsList = inputs.map((_, i) => `arg${i}`).join(", ");
 
     return `
-// --- DRIVER CODE START ---
 const fs = require('fs');
-
 const DELIMITER = '${DELIMITER}';
 
 try {
-    if (!fs.existsSync('/app/input.txt')) throw new Error('Input file not found');
     const inputData = fs.readFileSync('/app/input.txt', 'utf-8');
-    
     const testCases = inputData.split(DELIMITER).filter(tc => tc.trim() !== '');
 
     testCases.forEach((testCase) => {
         const lines = testCase.trim().split('\\n');
-        
 ${argParsingLogic}
 
-        if (typeof ${functionName} !== 'function') {
-            throw new Error("Function '${functionName}' not found.");
-        }
-        
         const result = ${functionName}(${argsList});
-        console.log(result);
+        
+        // Ensure standard JSON format (no extra spaces)
+        console.log(JSON.stringify(result));
         console.log(DELIMITER);
     });
-
 } catch (err) {
-    console.error("Driver Error:", err.message);
-    process.exit(1);
+    console.error(err);
 }
-// --- DRIVER CODE END ---
 `;
 }
 
 // ==========================================
-// 2. SMART PYTHON DRIVER
+// 2. PYTHON DRIVER
 // ==========================================
 function getPyDriver(functionName, inputs) {
     const argParsingLogic = inputs.map((input, index) => {
-        if (input.type.includes("List") || input.type.includes("vector")) {
-            return `            # Arg ${index}: Smart Parse
-            raw_val = lines[${index}].strip()
+        if (input.type.includes("List")) {
+            return `            raw_val = lines[${index}].strip()
             if raw_val.startswith("["):
                 arg${index} = json.loads(raw_val)
             else:
                 arg${index} = [int(x) for x in raw_val.split()]`;
         } else if (input.type === "int") {
-             return `            arg${index} = int(lines[${index}])`;
+            return `            arg${index} = int(lines[${index}])`;
         } else if (input.type === "float") {
-             return `            arg${index} = float(lines[${index}])`;
+            return `            arg${index} = float(lines[${index}])`;
         } else {
-             return `            arg${index} = lines[${index}].strip()`;
+            return `            arg${index} = lines[${index}].strip()`;
         }
     }).join("\n");
 
     const argsList = inputs.map((_, i) => `arg${i}`).join(", ");
 
     return `
-# --- DRIVER CODE START ---
 import sys
-import os
 import json
 
 DELIMITER = "${DELIMITER}"
@@ -140,85 +126,126 @@ def main():
         sol = Solution()
         
         for test_case in test_cases:
-            if not test_case.strip():
-                continue
-                
+            if not test_case.strip(): continue
             lines = test_case.strip().split('\\n')
             
 ${argParsingLogic}
 
             result = sol.${functionName}(${argsList})
-            print(result)
+            
+            # Sort lists to ensure [4,9] matches [9,4]
+            if isinstance(result, list):
+                result.sort()
+            
+            # Use json.dumps to print [1,2] without spaces
+            print(json.dumps(result, separators=(',', ':')))
             print(DELIMITER)
             
     except Exception as e:
-        sys.stderr.write(f"Driver Error: {str(e)}\\n")
-        sys.exit(1)
+        sys.stderr.write(str(e))
 
 if __name__ == "__main__":
     main()
-# --- DRIVER CODE END ---
 `;
 }
 
 // ==========================================
-// 3. CPP DRIVER
+// 3. C++ DRIVER
 // ==========================================
 function getCppDriver(problem) { 
     const inputParsing = problem.inputs.map((inp, i) => {
-        if (inp.type === "string") {
+        if (inp.type.includes("List") || inp.type.includes("vector")) {
+            return `
+        vector<int> arg${i};
+        string line${i};
+        getline(ss, line${i});
+        if (line${i}.size() >= 2 && line${i}.front() == '[' && line${i}.back() == ']') {
+            string inner = line${i}.substr(1, line${i}.size() - 2);
+            stringstream ss_line(inner);
+            string segment;
+            while(getline(ss_line, segment, ',')) {
+                if(!segment.empty()) {
+                    try { arg${i}.push_back(stoi(segment)); } catch(...) {}
+                }
+            }
+        }`;
+        } else if (inp.type === "int") {
+            return `int arg${i}; ss >> arg${i};`;
+        } else {
             return `string arg${i}; getline(ss, arg${i});`;
         }
-        if (inp.type === "int") {
-            return `int arg${i}; ss >> arg${i};`;
-        }
-        return `// Type ${inp.type} not fully supported in simple driver generator yet`; 
-    }).join("\n                ");
+    }).join("\n        ");
 
     const argsCall = problem.inputs.map((_, i) => `arg${i}`).join(", ");
     const paramTypes = problem.inputs.map(inp => TYPE_MAP[inp.type]?.cpp || "int").join(", ");
 
     return `
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <fstream> 
 
 using namespace std;
 
 // USER CODE WILL BE INJECTED HERE
 
-// Forward declaration just in case
 ${TYPE_MAP[problem.outputType]?.cpp || "int"} ${problem.functionName}(${paramTypes});
+
+// Helper: Print Vector as [1,2,3] (No spaces)
+template <typename T>
+void printResult(const vector<T>& v) {
+    cout << "[";
+    for (size_t i = 0; i < v.size(); ++i) {
+        cout << v[i];
+        if (i < v.size() - 1) cout << ",";
+    }
+    cout << "]";
+}
+
+template <typename T>
+void printResult(const T& val) {
+    cout << val;
+}
 
 int main() {
     const string DELIMITER = "${DELIMITER}";
     
-    ifstream t("/app/input.txt");
     stringstream buffer;
-    buffer << t.rdbuf();
+    buffer << cin.rdbuf(); 
     string content = buffer.str();
+
+    // Use file reader if cin is empty (fallback)
+    if (content.empty()) {
+        ifstream t("/app/input.txt");
+        if(t.is_open()) {
+            stringstream fbuffer;
+            fbuffer << t.rdbuf();
+            content = fbuffer.str();
+        }
+    }
 
     size_t prev = 0;
     while (true) {
         size_t pos = content.find(DELIMITER, prev);
-        string testCase = (pos != string::npos)
-            ? content.substr(prev, pos - prev)
-            : content.substr(prev);
-
+        string testCase = (pos != string::npos) ? content.substr(prev, pos - prev) : content.substr(prev);
+        
+        // Cleanup whitespace
         testCase.erase(0, testCase.find_first_not_of(" \\n\\r\\t"));
         testCase.erase(testCase.find_last_not_of(" \\n\\r\\t") + 1);
 
         if (!testCase.empty()) {
             stringstream ss(testCase);
-
             ${inputParsing}
-
+            
             auto result = ${problem.functionName}(${argsCall});
-            cout << result << endl;
-            cout << DELIMITER << endl;
+            
+            // Sort result for set-based problems
+            // sort(result.begin(), result.end());
+
+            printResult(result);
+            cout << endl << DELIMITER << endl;
         }
 
         if (pos == string::npos) break;
@@ -230,25 +257,45 @@ int main() {
 }
 
 // ==========================================
-// 4. JAVA DRIVER
+// 4. JAVA DRIVER (FIXED)
+// ==========================================
+// ==========================================
+// 4. JAVA DRIVER (FIXED IMPORTS)
 // ==========================================
 function getJavaDriver(problem) { 
+    // Dynamically generate input parsing logic
     const inputParsing = problem.inputs.map((inp, i) => {
-        if (inp.type === "string") {
-            return `String arg${i} = scanner.next();`;
+        const varName = `arg${i}`;
+        const readLine = `String raw${i} = scanner.hasNextLine() ? scanner.nextLine().trim() : "";`;
+
+        if (inp.type.includes("List")) {
+            return `
+                ${readLine}
+                List<Integer> ${varName} = parseIntegerList(raw${i});`;
+        } else if (inp.type === "int") {
+            return `
+                ${readLine}
+                int ${varName} = 0;
+                try { if(!raw${i}.isEmpty()) ${varName} = Integer.parseInt(raw${i}); } catch(Exception e) {}`;
+        } else {
+            return `
+                ${readLine}
+                String ${varName} = raw${i};
+                if (${varName}.length() >= 2 && ${varName}.startsWith("\\"") && ${varName}.endsWith("\\"")) {
+                    ${varName} = ${varName}.substring(1, ${varName}.length() - 1);
+                }`;
         }
-        if (inp.type === "int") {
-            return `int arg${i} = scanner.nextInt();`;
-        }
-         return `// Type ${inp.type} not fully supported in generator`; 
-    }).join("\n                ");
+    }).join("\n");
 
     const argsCall = problem.inputs.map((_, i) => `arg${i}`).join(", ");
 
     return `
 import java.io.*;
-import java.nio.file.*;
 import java.util.*;
+import java.util.stream.*;
+import java.nio.file.*; // <--- CRITICAL IMPORT
+import java.nio.file.Files; // Explicitly import Files to be safe
+import java.nio.file.Paths; // Explicitly import Paths to be safe
 
 public class Run {
 
@@ -258,38 +305,69 @@ public class Run {
         final String DELIMITER = "${DELIMITER}";
         final String INPUT_FILE = "/app/input.txt";
 
-        String content;
+        String content = "";
         try {
+            // Read file content safely
             content = Files.readString(Paths.get(INPUT_FILE));
-        } catch (IOException e) {
-            System.err.println("Input file not found");
-            return;
-        }
+        } catch (IOException e) { return; }
 
-        int prev = 0;
-        int pos;
+        // Regex split with safe delimiter escaping
+        String[] testCases = content.split(java.util.regex.Pattern.quote(DELIMITER));
 
-        while (true) {
-            pos = content.indexOf(DELIMITER, prev);
-            String testCase = (pos != -1)
-                ? content.substring(prev, pos)
-                : content.substring(prev);
+        for (String testCase : testCases) {
+            if (testCase.trim().isEmpty()) continue;
 
-            if (!testCase.trim().isEmpty()) {
-                Scanner scanner = new Scanner(testCase.trim());
-
+            Scanner scanner = new Scanner(testCase.trim());
+            try {
                 ${inputParsing}
 
-                // Assuming static method
                 var result = ${problem.functionName}(${argsCall});
-                System.out.println(result);
+                
+                // Sort Lists to ensure [4,9] matches [9,4]
+                if (result instanceof List) {
+                     Collections.sort((List<Integer>) result);
+                }
+
+                printResult(result);
+                System.out.println();
                 System.out.println(DELIMITER);
 
+            } catch (Exception e) {
+            } finally {
                 scanner.close();
             }
+        }
+    }
 
-            if (pos == -1) break;
-            prev = pos + DELIMITER.length();
+    private static List<Integer> parseIntegerList(String raw) {
+        if (raw == null || raw.isEmpty()) return new ArrayList<>();
+        if (raw.startsWith("[")) raw = raw.substring(1);
+        if (raw.endsWith("]")) raw = raw.substring(0, raw.length() - 1);
+        
+        raw = raw.trim();
+        if (raw.isEmpty()) return new ArrayList<>();
+        
+        String[] parts = raw.split("[,\\\\s]+");
+        List<Integer> list = new ArrayList<>();
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                try { list.add(Integer.parseInt(part.trim())); } catch(Exception e) {}
+            }
+        }
+        return list;
+    }
+
+    private static void printResult(Object result) {
+        if (result instanceof List) {
+            List<?> list = (List<?>) result;
+            System.out.print("[");
+            for (int i = 0; i < list.size(); i++) {
+                System.out.print(list.get(i));
+                if (i < list.size() - 1) System.out.print(",");
+            }
+            System.out.print("]");
+        } else {
+            System.out.print(result);
         }
     }
 }
@@ -299,11 +377,10 @@ public class Run {
 // ==========================================
 // 5. BOILERPLATE & MAIN
 // ==========================================
-
 function generateBoilerplate(config) {
     const { functionName, inputs, outputType } = config;
 
-    // --- 1. JAVASCRIPT ---
+    // --- JAVASCRIPT ---
     const jsParams = inputs.map(i => i.name).join(", ");
     const jsCode = `
 /**
@@ -316,10 +393,10 @@ function ${functionName}(${jsParams}) {
 }
 `;
 
-    // --- 2. PYTHON ---
+    // --- PYTHON ---
     const pyParams = inputs.map(i => `${i.name}: ${TYPE_MAP[i.type]?.py || "Any"}`).join(", ");
     const pyCode = `
-from typing import List, Dict, Optional
+from typing import List
 import json
 
 class Solution:
@@ -328,11 +405,10 @@ class Solution:
         return 0
 `;
 
-    // --- 3. C++ ---
+    // --- C++ ---
     const cppParams = inputs.map(i => `${TYPE_MAP[i.type]?.cpp || "int"} ${i.name}`).join(", ");
     const cppReturn = TYPE_MAP[outputType]?.cpp || "void";
     const cppDefault = getDefaultReturn(outputType, 'cpp');
-    
     const cppCode = `
 #include <bits/stdc++.h>
 using namespace std;
@@ -343,12 +419,10 @@ ${cppReturn} ${functionName}(${cppParams}) {
 }
 `;
 
-    // --- 4. JAVA ---
+    // --- JAVA ---
     const javaParams = inputs.map(i => `${TYPE_MAP[i.type]?.java || "int"} ${i.name}`).join(", ");
     const javaReturn = TYPE_MAP[outputType]?.java || "void";
     const javaDefault = getDefaultReturn(outputType, 'java');
-
-    // Note: We use a static method because the Driver calls it directly inside main()
     const javaCode = `
 public static ${javaReturn} ${functionName}(${javaParams}) {
     // Write your code here
@@ -356,14 +430,12 @@ public static ${javaReturn} ${functionName}(${javaParams}) {
 }
 `;
 
-    return { 
-        py: pyCode.trim(), 
-        js: jsCode.trim(), 
-        cpp: cppCode.trim(), 
-        java: javaCode.trim() 
-    };
+    return { py: pyCode.trim(), js: jsCode.trim(), cpp: cppCode.trim(), java: javaCode.trim() };
 }
 
+// ==========================================
+// 6. CREATE PROBLEM
+// ==========================================
 function createProblem() {
     const configPath = path.join(__dirname, CONFIG_FILE);
     if (!fs.existsSync(configPath)) {
@@ -379,58 +451,60 @@ function createProblem() {
     const outputDir = path.join(baseDir, "output");
     const driversDir = path.join(baseDir, "drivers");
 
-    // Cleanup & Create Dirs
+    // Clean & Recreate Directories
     if (fs.existsSync(baseDir)) fs.rmSync(baseDir, { recursive: true, force: true });
     [boilerplateDir, inputDir, outputDir, driversDir].forEach(d => fs.mkdirSync(d, { recursive: true }));
-    
-    // Create Language Specific Dirs
-    ['python', 'javascript', 'java', 'cpp'].forEach(lang => {
-        fs.mkdirSync(path.join(driversDir, lang), { recursive: true });
-    });
+    ['python', 'javascript', 'java', 'cpp'].forEach(lang => fs.mkdirSync(path.join(driversDir, lang), { recursive: true }));
 
     // Generate Input/Output Files
-    let fullInput = "";
-    let fullOutput = "";
+    let fullInputRaw = "";
+    let fullOutputRaw = "";
     const FILE_DELIMITER = "\n" + DELIMITER + "\n"; 
 
     config.testCases.forEach((tc, index) => {
         const i = index + 1;
-        fs.writeFileSync(path.join(inputDir, `${i}.txt`), tc.input);
-        fs.writeFileSync(path.join(outputDir, `${i}.txt`), tc.output);
-        fullInput += tc.input + FILE_DELIMITER;
-        fullOutput += tc.output + FILE_DELIMITER;
+        
+        let inputContent = "";
+        if (typeof tc.input === 'object' && !Array.isArray(tc.input)) {
+            Object.values(tc.input).forEach(val => {
+                inputContent += (typeof val === 'object' ? JSON.stringify(val) : val) + "\n";
+            });
+        } else {
+            inputContent = (typeof tc.input === 'object' ? JSON.stringify(tc.input) : tc.input) + "\n";
+        }
+        
+        let outputContent = (typeof tc.output === 'object' ? JSON.stringify(tc.output) : tc.output);
+
+        fs.writeFileSync(path.join(inputDir, `${i}.txt`), inputContent.trim());
+        fs.writeFileSync(path.join(outputDir, `${i}.txt`), outputContent);
+        
+        fullInputRaw += inputContent + DELIMITER + "\n";
+        fullOutputRaw += outputContent + DELIMITER + "\n";
     });
 
-    // Save Batches 
-    fs.writeFileSync(path.join(inputDir, "mount_data.txt"), fullInput.slice(0, -FILE_DELIMITER.length));
-    fs.writeFileSync(path.join(outputDir, "expected_data.txt"), fullOutput.slice(0, -FILE_DELIMITER.length));
+    fs.writeFileSync(path.join(inputDir, "mount_data.txt"), fullInputRaw);
+    fs.writeFileSync(path.join(outputDir, "expected_data.txt"), fullOutputRaw);
 
-    // --- GENERATE BOILERPLATE (ALL LANGUAGES) ---
+    // Generate Boilerplate & Drivers
     const code = generateBoilerplate(config);
     fs.writeFileSync(path.join(boilerplateDir, "function.py"), code.py);
     fs.writeFileSync(path.join(boilerplateDir, "function.js"), code.js);
     fs.writeFileSync(path.join(boilerplateDir, "function.cpp"), code.cpp);
     fs.writeFileSync(path.join(boilerplateDir, "function.java"), code.java);
 
-    // --- GENERATE DRIVERS ---
-    
-    // Python
     const pyDriver = getPyDriver(config.functionName, config.inputs);
     fs.writeFileSync(path.join(driversDir, "python", "driver.py"), pyDriver.trim());
 
-    // Javascript
     const jsDriver = getJsDriver(config.functionName, config.inputs);
     fs.writeFileSync(path.join(driversDir, "javascript", "driver.js"), jsDriver.trim());
 
-    // Java 
     const javaDriver = getJavaDriver(config); 
     fs.writeFileSync(path.join(driversDir, "java", "Run.java"), javaDriver.trim());
 
-    // C++ 
     const cppDriver = getCppDriver(config);
     fs.writeFileSync(path.join(driversDir, "cpp", "driver.cpp"), cppDriver.trim());
 
-    // Save Metadata
+    // Metadata
     const metadata = {
         slug: config.slug,
         name: config.name,

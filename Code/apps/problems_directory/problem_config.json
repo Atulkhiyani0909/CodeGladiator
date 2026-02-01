@@ -1,20 +1,19 @@
 {
-  "slug": "intersection-arrays",
-  "name": "Intersection of Two Arrays",
-  "functionName": "intersection",
+  "slug": "remove-duplicates",
+  "name": "Remove Duplicates from Sorted Array",
+  "functionName": "removeDuplicates",
   "inputs": [
-    { "name": "nums1", "type": "List<int>" },
-    { "name": "nums2", "type": "List<int>" }
+    { "name": "nums", "type": "List<int>" }
   ],
   "outputType": "List<int>",
   "testCases": [
-    { "input": "[1, 2, 2, 1]\n[2, 2]", "output": "[2]" },
-    { "input": "[4, 9, 5]\n[9, 4, 9, 8, 4]", "output": "[9, 4]" },
-    { "input": "[1, 2, 3]\n[4, 5, 6]", "output": "[]" },
-    { "input": "[1, 2, 3]\n[1, 2, 3]", "output": "[1, 2, 3]" },
-    { "input": "[1]\n[1]", "output": "[1]" },
-    { "input": "[]\n[1, 2]", "output": "[]" },
-    { "input": "[10, 20]\n[20, 30]", "output": "[20]" },
-    { "input": "[1, 2, 3]\n[2, 3, 4]", "output": "[2, 3]" }
+    { "input": "[1, 1, 2]", "output": "[1, 2]" },
+    { "input": "[0, 0, 1, 1, 1, 2, 2, 3, 3, 4]", "output": "[0, 1, 2, 3, 4]" },
+    { "input": "[1, 1, 1, 1]", "output": "[1]" },
+    { "input": "[1, 2, 3]", "output": "[1, 2, 3]" },
+    { "input": "[]", "output": "[]" },
+    { "input": "[10, 10, 20]", "output": "[10, 20]" },
+    { "input": "[-1, -1, 0, 0, 2]", "output": "[-1, 0, 2]" },
+    { "input": "[1, 2, 2]", "output": "[1, 2]" }
   ]
 }
