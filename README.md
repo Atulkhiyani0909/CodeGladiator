@@ -3,6 +3,22 @@
 > **Where Code Meets Glory.** A real-time competitive programming arena built for developers to battle, rank up, and prove their algorithmic prowess.
 
 <img width="1904" height="834" alt="image" src="https://github.com/user-attachments/assets/0b048d7b-6222-499b-92be-04ee4a8f9928" />
+<img width="1889" height="862" alt="image" src="https://github.com/user-attachments/assets/4d017196-15a9-4d06-be5e-ba90e455a3a8" />
+<img width="1900" height="869" alt="image" src="https://github.com/user-attachments/assets/ba53a51c-68f6-4f15-9d0c-52c9b033d88f" />
+<img width="1919" height="869" alt="image" src="https://github.com/user-attachments/assets/274c0a67-f7dd-469f-9bd8-36731c471a1c" />
+<img width="1898" height="862" alt="image" src="https://github.com/user-attachments/assets/b8b3123b-f061-4f58-b125-f2b615d8da35" />
+
+# Battle Mode 
+<img width="1905" height="903" alt="image" src="https://github.com/user-attachments/assets/adfac69f-acd7-4c2b-8824-e18a0f23b200" />
+
+
+<img width="1904" height="862" alt="image" src="https://github.com/user-attachments/assets/f5e90ca3-72fc-409f-b2af-fe955e952f82" />
+
+
+
+
+
+
 
 
 ## 🚀 Introduction
